@@ -1,0 +1,30 @@
+{
+  "name": "NBTC Tickets",
+  "short_name": "NBTC",
+  "description": "NBTC Basketball Ticketing",
+  "start_url": "/tickets",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/nbtc-logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "/nbtc-logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Scanner",
+      "short_name": "Scan",
+      "url": "/scanner",
+      "description": "Scan and verify tickets"
+    }
+  ]
+}
