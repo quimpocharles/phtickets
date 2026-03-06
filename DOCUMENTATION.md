@@ -102,11 +102,16 @@ ticket-sys/
 ├── web/                        # Next.js 14 frontend
 │   └── src/
 │       ├── app/
-│       │   ├── layout.tsx              # Root layout (Navbar)
+│       │   ├── layout.tsx              # Root layout (Navbar + Footer + JSON-LD Organization)
+│       │   ├── not-found.tsx           # Branded 404 page
+│       │   ├── robots.ts               # robots.txt generation
+│       │   ├── sitemap.ts              # sitemap.xml generation
 │       │   ├── page.tsx                # Home: upcoming games list
+│       │   ├── legal/
+│       │   │   └── page.tsx            # Combined Terms & Conditions + Privacy Policy
 │       │   ├── tickets/
 │       │   │   ├── page.tsx            # Tickets index
-│       │   │   └── [gameId]/page.tsx   # Game detail + purchase panel
+│       │   │   └── [gameId]/page.tsx   # Game detail + JSON-LD SportsEvent + purchase panel
 │       │   ├── scanner/
 │       │   │   └── page.tsx            # QR camera scanner (ZXing)
 │       │   └── admin/
@@ -124,6 +129,7 @@ ticket-sys/
 │       │               └── [gameId]/page.tsx # Gate reconciliation detail
 │       ├── components/
 │       │   ├── Navbar.tsx
+│       │   ├── Footer.tsx
 │       │   ├── GameCard.tsx
 │       │   ├── TicketTypeCard.tsx
 │       │   ├── TicketPurchasePanel.tsx
@@ -745,8 +751,46 @@ Deployed on **Vercel** (Next.js App Router). Set these in the Vercel project env
 
 Auto-generated at runtime:
 - `/robots.txt` — blocks `/admin/` and `/scanner/`; links to sitemap
-- `/sitemap.xml` — includes home, find tickets, and all game pages with `hourly` revalidation
+- `/sitemap.xml` — game pages: priority `1.0`, `hourly`; home: `0.9`, `daily`; `/tickets/find`: `0.4`; `/legal`: `0.2`, `monthly`
 
 Favicon: `/favico.png` (served from `web/src/app/icon.png` via Next.js App Router convention).
 
 Open Graph and Twitter card metadata are set globally in `layout.tsx` and overridden per game page via `generateMetadata()`.
+
+**OG Image:** `gh-marquee.png` (1200×630) — used as the global and per-game social share image.
+
+**Canonical URLs:** Set via `alternates.canonical` in `generateMetadata()` for each game page (`/tickets/:gameId`).
+
+**Custom 404:** `web/src/app/not-found.tsx` — branded page with Smart logo, "Page not found" message, and "Get Tickets →" CTA linking to `/`. Search engines excluded via `robots: { index: false, follow: false }`.
+
+### Structured Data (JSON-LD)
+
+Two schemas are injected server-side via `<script type="application/ld+json">`:
+
+**Organization** (global, in `layout.tsx`):
+```json
+{
+  "@type": "Organization",
+  "name": "Global Hoops International",
+  "url": "https://tickets.globalhoops.com",
+  "logo": "https://tickets.globalhoops.com/favico.png",
+  "sameAs": ["facebook.com/...", "instagram.com/globalhoopsint"]
+}
+```
+
+**SportsEvent** (per game, in `tickets/[gameId]/page.tsx`):
+```json
+{
+  "@type": "SportsEvent",
+  "name": "<game.description>",
+  "startDate": "<game.gameDate>",
+  "endDate": "<game.eventEndDate>",
+  "eventStatus": "schema.org/EventScheduled",
+  "eventAttendanceMode": "schema.org/OfflineEventAttendanceMode",
+  "location": { "@type": "Place", "name": "<game.venue>" },
+  "organizer": { "@type": "Organization", "name": "Global Hoops International" },
+  "sponsor": { "@type": "Organization", "name": "Smart Communications" },
+  "sport": "Basketball",
+  "offers": [{ "@type": "Offer", "price": "<price>", "priceCurrency": "PHP", "availability": "InStock|SoldOut" }]
+}
+```
