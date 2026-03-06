@@ -1,12 +1,16 @@
 'use client';
 
+import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
 // Pages that render full-screen without the sidebar shell
 const BARE_ROUTES = ['/admin/login', '/admin/setup'];
 
-const NAV = [
+type NavItem = { label: string; href: string; exact?: boolean; icon: React.ReactElement };
+type NavGroup = { section: string; superAdminOnly?: boolean; items: NavItem[] };
+
+const NAV: NavGroup[] = [
   {
     section: 'Overview',
     items: [
