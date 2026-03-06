@@ -15,15 +15,17 @@ export default function GameCard({ game }: Props) {
     : null;
 
   const startDate = new Date(game.gameDate);
+  const TZ = 'Asia/Manila';
   const endDate   = new Date(game.eventEndDate);
-  const isSameDay = startDate.toDateString() === endDate.toDateString();
+  const dayKey    = (d: Date) => d.toLocaleDateString('en-PH', { timeZone: TZ });
+  const isSameDay = dayKey(startDate) === dayKey(endDate);
 
   const dateStr = isSameDay
-    ? startDate.toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
-    : `${startDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}–${endDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    ? startDate.toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: TZ })
+    : `${startDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', timeZone: TZ })}–${endDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', timeZone: TZ })}`;
 
   const timeStr = startDate.toLocaleTimeString('en-PH', {
-    hour: 'numeric', minute: '2-digit', hour12: true,
+    hour: 'numeric', minute: '2-digit', hour12: true, timeZone: TZ,
   });
 
   return (

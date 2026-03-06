@@ -29,10 +29,10 @@ export async function generateMetadata({ params }: Props) {
   if (!game) return {};
 
   const date = new Date(game.gameDate).toLocaleDateString('en-PH', {
-    month: 'long', day: 'numeric', year: 'numeric',
+    month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila',
   });
   const endDate = new Date(game.eventEndDate).toLocaleDateString('en-PH', {
-    month: 'long', day: 'numeric', year: 'numeric',
+    month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila',
   });
   const dateRange = date === endDate ? date : `${date} – ${endDate}`;
   const title = `${game.description} — Official Tickets`;
@@ -77,23 +77,22 @@ export default async function GameDetailPage({ params }: Props) {
   const gameDate = new Date(game.gameDate);
   const endDate  = new Date(game.eventEndDate);
 
+  const TZ = 'Asia/Manila';
   const dateStr = gameDate.toLocaleDateString('en-PH', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: TZ,
   });
   const timeStr = gameDate.toLocaleTimeString('en-PH', {
-    hour: 'numeric', minute: '2-digit', hour12: true,
+    hour: 'numeric', minute: '2-digit', hour12: true, timeZone: TZ,
   });
   const endDateStr = endDate.toLocaleDateString('en-PH', {
-    year: 'numeric', month: 'long', day: 'numeric',
+    year: 'numeric', month: 'long', day: 'numeric', timeZone: TZ,
   });
   const endTimeStr = endDate.toLocaleTimeString('en-PH', {
-    hour: 'numeric', minute: '2-digit', hour12: true,
+    hour: 'numeric', minute: '2-digit', hour12: true, timeZone: TZ,
   });
 
-  const sameDay =
-    gameDate.getFullYear() === endDate.getFullYear() &&
-    gameDate.getMonth()    === endDate.getMonth()    &&
-    gameDate.getDate()     === endDate.getDate();
+  const dayKey    = (d: Date) => d.toLocaleDateString('en-PH', { timeZone: TZ });
+  const sameDay   = dayKey(gameDate) === dayKey(endDate);
 
   const jsonLd = {
     '@context': 'https://schema.org',

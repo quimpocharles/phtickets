@@ -302,15 +302,14 @@ export default function TicketPurchasePanel({ game }: Props) {
     </div>
   );
 
+  const TZ = 'Asia/Manila';
   const gameDate = new Date(game.gameDate);
   const endDate  = new Date(game.eventEndDate);
-  const sameDay  =
-    gameDate.getFullYear() === endDate.getFullYear() &&
-    gameDate.getMonth()    === endDate.getMonth()    &&
-    gameDate.getDate()     === endDate.getDate();
-  const dateStr    = gameDate.toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const timeStr    = gameDate.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true });
-  const endDateStr = endDate.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
+  const dayKey   = (d: Date) => d.toLocaleDateString('en-PH', { timeZone: TZ });
+  const sameDay  = dayKey(gameDate) === dayKey(endDate);
+  const dateStr    = gameDate.toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: TZ });
+  const timeStr    = gameDate.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: TZ });
+  const endDateStr = endDate.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', timeZone: TZ });
 
   return (
     <>

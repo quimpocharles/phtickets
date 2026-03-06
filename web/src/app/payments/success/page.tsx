@@ -120,10 +120,10 @@ function SuccessContent() {
   const game     = order!.gameId;
   const gameDate = new Date(game.gameDate);
   const dateStr  = gameDate.toLocaleDateString('en-PH', {
-    month: 'long', day: 'numeric', year: 'numeric',
+    month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila',
   });
   const timeStr = gameDate.toLocaleTimeString('en-PH', {
-    hour: 'numeric', minute: '2-digit', hour12: true,
+    hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila',
   });
   const isAllEvents = order!.ticketTypeId.scope === 'all';
 

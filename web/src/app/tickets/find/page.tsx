@@ -132,8 +132,8 @@ export default function FindTicketPage() {
             {results.map(({ order, tickets }) => {
               const game     = order.gameId;
               const gameDate = new Date(game.gameDate);
-              const dateStr  = gameDate.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
-              const timeStr  = gameDate.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true });
+              const dateStr  = gameDate.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' });
+              const timeStr  = gameDate.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila' });
               const isOpen   = expanded === order._id;
 
               return (
