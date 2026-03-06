@@ -286,23 +286,18 @@ export default function TicketPurchasePanel({ game }: Props) {
               <p className="text-xs text-offblack/40 mt-0.5 mb-1.5">
                 Which country are you representing / supporting?
               </p>
-              <div className="grid grid-cols-2 gap-2 mt-1">
+              <select
+                value={form.country}
+                onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
+                className={`w-full mt-1 rounded-xl border px-3 py-2.5 text-sm bg-white appearance-none
+                  focus:outline-none focus:ring-2 focus:ring-offblack/20 transition-colors
+                  ${errors.country ? 'border-danger' : 'border-black/15'}`}
+              >
+                <option value="">Select a country…</option>
                 {COUNTRIES.map((c) => (
-                  <button
-                    key={c.code}
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, country: c.code }))}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 text-left transition-all
-                      ${form.country === c.code
-                        ? 'border-offblack bg-offblack text-white'
-                        : 'border-black/10 bg-white hover:border-offblack/30 text-offblack'
-                      }`}
-                  >
-                    <span className="text-xl leading-none">{c.flag}</span>
-                    <span className="text-xs font-semibold leading-tight">{c.label}</span>
-                  </button>
+                  <option key={c.code} value={c.code}>{c.flag} {c.label}</option>
                 ))}
-              </div>
+              </select>
               {errors.country && (
                 <p className="text-xs text-danger mt-1.5">{errors.country}</p>
               )}
