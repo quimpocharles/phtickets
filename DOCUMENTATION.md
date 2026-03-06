@@ -21,6 +21,10 @@
 17. [End-of-Day Report](#end-of-day-report)
 18. [Admin Dashboard](#admin-dashboard)
 19. [Frontend Pages & Components](#frontend-pages--components)
+20. [Security](#security)
+21. [Database Indexes](#database-indexes)
+22. [Seeding Mock Orders](#seeding-mock-orders)
+23. [Deployment](#deployment)
 
 ---
 
@@ -162,36 +166,42 @@ ticket-sys/
 
 ```env
 PORT=3000
+NODE_ENV=production            # REQUIRED — controls Maya bypass and error verbosity
 MONGODB_URI=mongodb+srv://<user>:<pass>@cluster.mongodb.net/ticket-sys
+ALLOWED_ORIGIN=https://your-frontend-domain.com   # REQUIRED in production
 
-JWT_SECRET=<long-random-string>
+JWT_SECRET=<long-random-string-32-bytes-minimum>
 JWT_EXPIRES_IN=8h
 
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 
-SMTP_HOST=smtp.gmail.com
+SMTP_HOST=fusion.mxrouting.net
 SMTP_PORT=587
 SMTP_USER=
 SMTP_PASS=
+EMAIL_FROM=noreply@yourdomain.com   # must match SMTP_USER
 
 SEMAPHORE_API_KEY=
 SEMAPHORE_SENDER_NAME=NBTC
 
-MAYA_PUBLIC_KEY=
-MAYA_SECRET_KEY=
-MAYA_BASE_URL=https://pg.maya.ph
-MAYA_WEBHOOK_SECRET=
+MAYA_PUBLIC_KEY=               # pk-... (used for createCheckout)
+MAYA_SECRET_KEY=               # sk-... (used for getPaymentStatus)
+MAYA_BASE_URL=https://pg.maya.ph                  # sandbox: https://pg-sandbox.paymaya.com
+MAYA_WEBHOOK_SECRET=           # REQUIRED in production — HMAC-SHA512 webhook signature key
 
-APP_BASE_URL=https://your-production-domain.com
+APP_BASE_URL=https://your-frontend-domain.com
 EOD_REPORT_RECIPIENTS=admin@example.com,ops@example.com
 ```
+
+> **Note:** `MAYA_WEBHOOK_SECRET` must be set in production. If left empty, webhook signature verification is skipped and any client can fake payment confirmations.
 
 ### Frontend (`web/.env.local`)
 
 ```env
 NEXT_PUBLIC_API_URL=https://api.your-production-domain.com
+NEXT_PUBLIC_APP_URL=https://your-frontend-domain.com   # used for SEO metadataBase and sitemap
 ```
 
 ---
@@ -235,25 +245,30 @@ npm run dev
 
 ```js
 {
-  teamA:       ObjectId → Team,
-  teamB:       ObjectId → Team,
-  venue:       String,
-  gameDate:    Date,
-  bannerImage: String,        // Cloudinary URL
-  createdAt:   Date,
+  description:  String,       // free-text e.g. "Letran vs San Beda | EAC vs Mapua"
+  venue:        String,
+  gameDate:     Date,
+  eventEndDate: Date,
+  bannerImage:  String,       // Cloudinary URL (optional; falls back to /landing.png)
+  createdAt:    Date,
 }
+// Index: gameDate
 ```
 
 ### TicketType
 
 ```js
 {
-  gameId:   ObjectId → Game,
-  name:     String,           // e.g. "VIP", "Lowerbox"
-  price:    Number,           // PHP
-  quantity: Number,           // total capacity
-  sold:     Number,           // incremented on PAYMENT_SUCCESS
+  gameId:             ObjectId → Game,
+  name:               String,     // e.g. "VIP All Events Pass"
+  price:              Number,     // PHP
+  quantity:           Number,     // total capacity
+  sold:               Number,     // incremented atomically on PAYMENT_SUCCESS
+  scope:              'day'|'all',// day = single event, all = valid every event day
+  ticketsPerPurchase: Number,     // QR codes generated per unit (5 for family passes)
+  __v:                Number,     // Mongoose version key — used for OCC on admin edits
 }
+// Index: gameId
 ```
 
 ### Order
@@ -273,6 +288,7 @@ npm run dev
   reservationId:    ObjectId → TicketReservation,
   createdAt:        Date,
 }
+// Indexes: reservationId, gameId, (buyerEmail + buyerPhone) compound
 ```
 
 ### Ticket
@@ -287,6 +303,7 @@ npm run dev
   status:       'unused' | 'used',
   createdAt:    Date,
 }
+// Indexes: orderId, gameId
 ```
 
 ### TicketReservation
@@ -323,6 +340,12 @@ TTL constants:
 }
 ```
 
+### ScanLog (indexes)
+
+```
+// Indexes: ticketId, gameId
+```
+
 ### Admin
 
 ```js
@@ -330,6 +353,8 @@ TTL constants:
   email:     String (unique),
   password:  String (bcrypt hash),
   name:      String,
+  role:      'super_admin' | 'admin' | 'scanner',
+  deletedAt: Date,            // soft-delete; null = active
   createdAt: Date,
 }
 ```
@@ -354,27 +379,36 @@ TTL constants:
 | Method | Endpoint | Description |
 |---|---|---|
 | GET | `/games` | Upcoming games with ticket types, availability, urgency badges |
-| POST | `/tickets/reserve` | Reserve seats (5-min hold) |
 | POST | `/tickets/purchase` | Reserve seats + create Maya checkout |
-| GET | `/tickets/verify/:ticketId` | Validate and mark ticket as used (gate scanner) |
-| POST | `/payments/webhook` | Maya payment webhook |
+| GET | `/tickets/order/:reservationId` | Poll order status (success page polling) |
+| GET | `/tickets/find` | Find tickets by email + phone |
+| GET | `/tickets/verify/:ticketId` | Validate and mark ticket used (gate scanner, JWT required) |
+| POST | `/payments/webhook` | Maya payment webhook (HMAC-SHA512 verified) |
+| POST | `/payments/process/:reservationId` | Dev-only bypass — skips Maya, processes payment directly |
 
 ### Admin (all require `Authorization: Bearer <token>`)
 
 | Method | Endpoint | Description |
 |---|---|---|
 | GET | `/admin/setup-status` | Is first-time setup needed? |
-| POST | `/admin/register` | Create first admin (disabled after first use) |
+| POST | `/admin/register` | Create first super_admin (disabled after first use) |
 | POST | `/admin/login` | Authenticate, returns JWT |
 | GET | `/admin/profile` | Current admin info |
+| GET | `/admin/admins` | List all admins (super_admin only) |
+| POST | `/admin/admins` | Create admin/scanner account |
+| DELETE | `/admin/admins/:id` | Soft-delete admin |
 | GET | `/admin/teams` | List all teams |
 | POST | `/admin/teams` | Create team (multipart: name, monicker, logo) |
 | PATCH | `/admin/teams/:id` | Update team |
 | DELETE | `/admin/teams/:id` | Delete team |
 | GET | `/admin/games` | All games with sales summary |
-| POST | `/admin/games` | Create game (multipart: teamA, teamB, venue, gameDate, bannerImage) |
-| POST | `/admin/games/:gameId/tickets` | Add ticket types to a game |
+| POST | `/admin/games` | Create game (multipart: description, venue, gameDate, eventEndDate, bannerImage) |
+| PATCH | `/admin/games/:gameId` | Edit game |
 | DELETE | `/admin/games/:gameId` | Delete game + ticket types + open reservations |
+| POST | `/admin/games/:gameId/tickets` | Add ticket type |
+| PATCH | `/admin/games/:gameId/tickets/:ticketTypeId` | Edit ticket type (requires `__v` for OCC) |
+| DELETE | `/admin/games/:gameId/tickets/:ticketTypeId` | Delete ticket type |
+| GET | `/admin/orders` | List all paid orders |
 | GET | `/admin/reports/gate/:gameId` | Gate reconciliation report |
 | GET | `/admin/reports/gate/:gameId/export` | Gate scan log CSV download |
 | GET | `/admin/report-recipients` | List EOD email recipients |
@@ -456,7 +490,9 @@ The webhook is the single authoritative state machine for payment outcomes.
 
 **Atomic claim**: The reservation is updated with `findOneAndUpdate` matching `{ status: 'reserved', expiresAt: { $gt: now } }`. If that returns null (already processed or expired), the webhook aborts.
 
-**Signature verification**: Maya sends an `Authorization` header; the webhook verifies it against `MAYA_WEBHOOK_SECRET`.
+**Signature verification**: Maya sends an `x-signature` header. The webhook computes `HMAC-SHA512(rawBody, MAYA_WEBHOOK_SECRET)` and uses `crypto.timingSafeEqual()` for comparison. Verification is skipped only when `MAYA_WEBHOOK_SECRET` is not set (local dev only).
+
+**Dev bypass**: `POST /payments/process/:reservationId` is available only when `NODE_ENV=development`. It skips Maya verification and processes the reservation directly — used for seeding test orders and local end-to-end testing.
 
 ---
 
@@ -591,24 +627,117 @@ Protected by JWT stored in `localStorage`. All requests include `Authorization: 
 
 | Route | Description |
 |---|---|
-| `/` | Home: upcoming games list |
-| `/tickets` | Ticket browsing |
-| `/tickets/:gameId` | Game detail: ticket types, purchase panel, reservation countdown |
-| `/scanner` | QR camera scanner for gate staff |
+| `/` | Redirects directly to the active game's ticket page |
+| `/tickets/:gameId` | Game detail: ticket-style banner, purchase panel, reservation countdown |
+| `/tickets/find` | Find My Tickets — lookup by email + phone |
+| `/payments/success` | Post-payment success: polls order status, displays QR tickets |
+| `/payments/failure` | Payment failure page |
+| `/payments/cancel` | Payment cancelled page |
+| `/scanner` | QR camera scanner for gate staff (JWT required) |
 
 ### Components
 
 | Component | Description |
 |---|---|
-| `Navbar` | Site navigation |
-| `GameCard` | Game tile with banner, teams, venue, date |
-| `TicketTypeCard` | Ticket tier with price, urgency badge, scarcity message |
-| `TicketPurchasePanel` | Quantity selector + buyer form + checkout + reservation countdown |
+| `Navbar` | Floating frosted-glass navbar (Apple-style); shrinks on scroll; logo centred |
+| `TicketTypeCard` | Ticket tier card with stacked design, urgency starburst badge, three states (default / selected / sold-out) |
+| `TicketPurchasePanel` | Desktop/tablet: two-column layout. Mobile: full-width ticket list + floating cart button opens side drawer |
+| `GameCard` | Game tile with banner, description, venue, date |
 | `Badge` | Urgency badge renderer |
-| `TeamSearchDropdown` | Searchable team selector with logo, name, monicker; used in game creation form |
+| `TeamSearchDropdown` | Searchable team selector used in game creation form |
+
+### Banner Design
+
+The game detail page banner (`/tickets/:gameId`) uses a ticket-stub layout:
+- **Left**: dark background, yellow "NBTC Tickets" label, large white game title, tagline
+- **Bottom strip**: scrolling marquee (CSS animation) — `landing.png` thumbnail → date chip (yellow) → venue (blue) → game description (red), loops infinitely
+- **Right panel**: dashed separator, `smart-nbtc-por.png` logo, off-white background
+- Bottom of banner: dashed primary-blue border (matching ticket card weight)
 
 ### Ticket ID Format
 
 `NBTC26-000001` — prefix `NBTC` + 2-digit year + 6-digit zero-padded sequential counter
 
 Stored in the `counters` MongoDB collection, incremented atomically via `Counter.nextSeq()`.
+
+---
+
+## Security
+
+| Measure | Implementation |
+|---|---|
+| Security headers | `helmet` middleware (first middleware in `src/app.js`) |
+| CORS | `ALLOWED_ORIGIN` env var; defaults to `*` in dev only |
+| Rate limiting | 20 req/15min on `/tickets/purchase`; 10 req/5min on `/tickets/find` |
+| JWT auth | All `/admin` routes; `adminAuth` middleware verifies token + checks soft-delete |
+| Role-based access | `requireAdmin` / `requireScanner` / `requireSuperAdmin` middleware |
+| Webhook verification | HMAC-SHA512, `crypto.timingSafeEqual()`, `x-signature` header |
+| Error messages | 500 responses return `"An unexpected error occurred."` — full errors logged server-side only |
+| Global error handlers | `unhandledRejection` + `uncaughtException` in `src/server.js` |
+| Dev bypass guard | `POST /payments/process` blocked unless `NODE_ENV=development` |
+| NoSQL injection | Mongoose parameterisation; regex queries anchored with `^...$` |
+
+---
+
+## Database Indexes
+
+Indexes are defined at the bottom of each model file and created automatically by Mongoose on startup.
+
+| Model | Indexes |
+|---|---|
+| `Game` | `gameDate` |
+| `TicketType` | `gameId` |
+| `TicketReservation` | `expiresAt` (TTL), `(ticketTypeId, status, expiresAt)` compound |
+| `Order` | `reservationId`, `gameId`, `(buyerEmail, buyerPhone)` compound |
+| `Ticket` | `ticketId` (unique), `orderId`, `gameId` |
+| `ScanLog` | `ticketId`, `gameId` |
+
+---
+
+## Seeding Mock Orders
+
+`scripts/seed-orders.js` creates mock paid orders for development testing. It connects directly to MongoDB, creates `TicketReservation` documents with a fake `checkoutId`, then calls `POST /payments/process/:reservationId` for each — triggering the full pipeline (sold count, QR generation, email, SMS).
+
+**Requirements:**
+- Backend server must be running on `API_URL` (default `http://localhost:3000`)
+- `NODE_ENV=development` must be set in `.env`
+
+```bash
+node scripts/seed-orders.js
+node scripts/seed-orders.js --game <gameId>   # target a specific game
+```
+
+The `ORDERS` array in the script is pre-configured with buyer names, emails, phone numbers, quantities, and ticket type name fragments that are matched case-insensitively against the game's ticket types.
+
+---
+
+## Deployment
+
+### Backend
+
+Recommended: any Node.js host (Railway, Render, Fly.io, VPS with PM2).
+
+Required env vars for production:
+- `NODE_ENV=production`
+- `MONGODB_URI`
+- `ALLOWED_ORIGIN` (frontend domain)
+- `JWT_SECRET` (32+ random bytes)
+- `MAYA_PUBLIC_KEY`, `MAYA_SECRET_KEY`, `MAYA_BASE_URL=https://pg.maya.ph`
+- `MAYA_WEBHOOK_SECRET`
+- All Cloudinary, SMTP, Semaphore vars
+
+### Frontend
+
+Deployed on **Vercel** (Next.js App Router). Set these in the Vercel project environment variables:
+- `NEXT_PUBLIC_API_URL` — backend API URL
+- `NEXT_PUBLIC_APP_URL` — frontend canonical URL (used for SEO `metadataBase` and sitemap)
+
+### SEO
+
+Auto-generated at runtime:
+- `/robots.txt` — blocks `/admin/` and `/scanner/`; links to sitemap
+- `/sitemap.xml` — includes home, find tickets, and all game pages with `hourly` revalidation
+
+Favicon: `/nbtc-logo.jpg` (served from `web/src/app/icon.jpg` via Next.js App Router convention).
+
+Open Graph and Twitter card metadata are set globally in `layout.tsx` and overridden per game page via `generateMetadata()`.

@@ -1,6 +1,7 @@
 const express   = require('express');
-const cors       = require('cors');
-const rateLimit  = require('express-rate-limit');
+const cors      = require('cors');
+const helmet    = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 const gamesRouter    = require('./routes/games');
 const adminRouter    = require('./routes/admin');
@@ -8,6 +9,11 @@ const ticketsRouter  = require('./routes/tickets');
 const paymentsRouter = require('./routes/payments');
 
 const app = express();
+
+// ── Security headers (helmet) ─────────────────────────────────────────────────
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }, // allow Cloudinary images
+}));
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 // In production set ALLOWED_ORIGIN to your frontend domain.

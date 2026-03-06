@@ -5,12 +5,29 @@ import { useRouter } from 'next/navigation';
 
 interface TicketType {
   _id: string;
+  __v: number;
   name: string;
   price: number;
   quantity: number;
   sold: number;
   scope: 'day' | 'all';
   ticketsPerPurchase: number;
+}
+
+interface EditForm {
+  name: string;
+  price: string;
+  quantity: string;
+  scope: 'day' | 'all';
+  ticketsPerPurchase: string;
+  __v: number;
+}
+
+interface EditErrors {
+  name?: string;
+  price?: string;
+  quantity?: string;
+  ticketsPerPurchase?: string;
 }
 
 interface Game {
@@ -57,6 +74,13 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [successCount, setSuccessCount] = useState<number | null>(null);
+
+  // ── Edit state ───────────────────────────────────────────────────────────────
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<EditForm | null>(null);
+  const [editErrors, setEditErrors] = useState<EditErrors>({});
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   // ── Load game data ──────────────────────────────────────────────────────────
   const loadGame = useCallback(async () => {
@@ -107,6 +131,95 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
   function removeRow(index: number) {
     setRows((prev) => prev.filter((_, i) => i !== index));
     setRowErrors((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  // ── Edit helpers ────────────────────────────────────────────────────────────
+  function startEdit(tt: TicketType) {
+    setEditingId(tt._id);
+    setEditForm({
+      name:               tt.name,
+      price:              String(tt.price),
+      quantity:           String(tt.quantity),
+      scope:              tt.scope,
+      ticketsPerPurchase: String(tt.ticketsPerPurchase),
+      __v:                tt.__v,
+    });
+    setEditErrors({});
+    setEditError(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditForm(null);
+    setEditErrors({});
+    setEditError(null);
+  }
+
+  function updateEditField(field: keyof Omit<EditForm, '__v'>, value: string) {
+    setEditForm((prev) => prev ? { ...prev, [field]: value } : prev);
+    setEditErrors((prev) => ({ ...prev, [field]: undefined }));
+    setEditError(null);
+  }
+
+  function validateEdit(): boolean {
+    if (!editForm) return false;
+    const e: EditErrors = {};
+    if (!editForm.name.trim())                                                        e.name     = 'Required.';
+    if (!editForm.price || isNaN(Number(editForm.price)))                             e.price    = 'Enter a valid price.';
+    else if (Number(editForm.price) < 0)                                              e.price    = 'Must be 0 or more.';
+    if (!editForm.quantity || isNaN(Number(editForm.quantity)))                       e.quantity = 'Enter a valid number.';
+    else if (!Number.isInteger(Number(editForm.quantity)) || Number(editForm.quantity) < 1)
+      e.quantity = 'Must be a whole number ≥ 1.';
+    if (!editForm.ticketsPerPurchase || isNaN(Number(editForm.ticketsPerPurchase)))   e.ticketsPerPurchase = 'Enter a valid number.';
+    else if (!Number.isInteger(Number(editForm.ticketsPerPurchase)) || Number(editForm.ticketsPerPurchase) < 1)
+      e.ticketsPerPurchase = 'Must be a whole number ≥ 1.';
+    setEditErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editForm || !editingId) return;
+    if (!validateEdit()) return;
+
+    setEditSaving(true);
+    setEditError(null);
+
+    const token = localStorage.getItem('adminToken');
+    try {
+      const res = await fetch(`${API_URL}/admin/games/${gameId}/tickets/${editingId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name:               editForm.name.trim(),
+          price:              Number(editForm.price),
+          quantity:           Number(editForm.quantity),
+          scope:              editForm.scope,
+          ticketsPerPurchase: Number(editForm.ticketsPerPurchase),
+          __v:                editForm.__v,
+        }),
+      });
+
+      if (res.status === 401) {
+        localStorage.removeItem('adminToken');
+        router.replace('/admin/login');
+        return;
+      }
+
+      const json = await res.json();
+      if (res.status === 409) { setEditError('conflict'); return; }
+      if (!res.ok) { setEditError(json.message ?? 'Failed to update ticket type.'); return; }
+
+      cancelEdit();
+      loadGame();
+    } catch {
+      setEditError('Could not reach the server. Please try again.');
+    } finally {
+      setEditSaving(false);
+    }
   }
 
   // ── Validation ──────────────────────────────────────────────────────────────
@@ -229,12 +342,13 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
                   <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">QRs / Purchase</th>
                   <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Price</th>
                   <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Capacity</th>
-                  <th className="text-right px-6 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Sold</th>
+                  <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Sold</th>
+                  <th className="px-6 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-black/5">
                 {game.ticketTypes.map((tt) => (
-                  <tr key={tt._id} className="hover:bg-offwhite/40 transition-colors">
+                  <tr key={tt._id} className={`transition-colors ${editingId === tt._id ? 'bg-primary/5' : 'hover:bg-offwhite/40'}`}>
                     <td className="px-6 py-3 font-semibold text-offblack">{tt.name}</td>
                     <td className="px-4 py-3">
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full
@@ -248,15 +362,169 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
                     <td className="px-4 py-3 text-right text-offblack/70">{tt.ticketsPerPurchase}</td>
                     <td className="px-4 py-3 text-right text-offblack/70">₱{tt.price.toLocaleString()}</td>
                     <td className="px-4 py-3 text-right text-offblack/70">{tt.quantity.toLocaleString()}</td>
-                    <td className="px-6 py-3 text-right">
+                    <td className="px-4 py-3 text-right">
                       <span className={tt.sold > 0 ? 'font-semibold text-primary' : 'text-offblack/40'}>
                         {tt.sold.toLocaleString()}
                       </span>
+                    </td>
+                    <td className="px-6 py-3 text-right">
+                      {editingId === tt._id ? (
+                        <button
+                          type="button"
+                          onClick={cancelEdit}
+                          className="text-xs font-semibold text-offblack/40 hover:text-offblack transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => startEdit(tt)}
+                          className="text-xs font-semibold text-primary hover:text-primary/70 transition-colors"
+                        >
+                          Edit
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
+            {/* ── Inline edit panel ── */}
+            {editingId && editForm && (
+              <form
+                onSubmit={handleEditSubmit}
+                noValidate
+                className="border-t border-black/8 px-6 py-5 bg-offwhite/40"
+              >
+                <p className="text-xs font-bold uppercase tracking-wide text-offblack/40 mb-4">
+                  Editing: {editForm.name}
+                </p>
+
+                <div className="flex flex-col gap-3">
+                  {/* Name + Scope */}
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_160px] gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-offblack/50 uppercase tracking-wide">Name</label>
+                      <input
+                        type="text"
+                        value={editForm.name}
+                        onChange={(e) => updateEditField('name', e.target.value)}
+                        className={`w-full rounded-lg border px-3 py-2.5 text-sm bg-white text-offblack
+                          focus:outline-none focus:ring-2 focus:bg-white transition-all
+                          ${editErrors.name ? 'border-danger focus:ring-danger/20' : 'border-black/12 focus:ring-primary/20 focus:border-primary/50'}`}
+                      />
+                      {editErrors.name && <p className="text-[11px] text-danger font-medium">{editErrors.name}</p>}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-offblack/50 uppercase tracking-wide">Validity</label>
+                      <select
+                        value={editForm.scope}
+                        onChange={(e) => updateEditField('scope', e.target.value)}
+                        className="w-full rounded-lg border border-black/12 px-3 py-2.5 text-sm bg-white text-offblack
+                          focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
+                      >
+                        <option value="day">Single Day</option>
+                        <option value="all">All Events (VIP)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Price + Quantity + QRs */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-offblack/50 uppercase tracking-wide">Price (₱)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={editForm.price}
+                        onChange={(e) => updateEditField('price', e.target.value)}
+                        className={`w-full rounded-lg border px-3 py-2.5 text-sm bg-white text-offblack
+                          focus:outline-none focus:ring-2 focus:bg-white transition-all
+                          ${editErrors.price ? 'border-danger focus:ring-danger/20' : 'border-black/12 focus:ring-primary/20 focus:border-primary/50'}`}
+                      />
+                      {editErrors.price && <p className="text-[11px] text-danger font-medium">{editErrors.price}</p>}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-offblack/50 uppercase tracking-wide">Capacity</label>
+                      <input
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={editForm.quantity}
+                        onChange={(e) => updateEditField('quantity', e.target.value)}
+                        className={`w-full rounded-lg border px-3 py-2.5 text-sm bg-white text-offblack
+                          focus:outline-none focus:ring-2 focus:bg-white transition-all
+                          ${editErrors.quantity ? 'border-danger focus:ring-danger/20' : 'border-black/12 focus:ring-primary/20 focus:border-primary/50'}`}
+                      />
+                      {editErrors.quantity && <p className="text-[11px] text-danger font-medium">{editErrors.quantity}</p>}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-offblack/50 uppercase tracking-wide">QRs / Purchase</label>
+                      <input
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={editForm.ticketsPerPurchase}
+                        onChange={(e) => updateEditField('ticketsPerPurchase', e.target.value)}
+                        className={`w-full rounded-lg border px-3 py-2.5 text-sm bg-white text-offblack
+                          focus:outline-none focus:ring-2 focus:bg-white transition-all
+                          ${editErrors.ticketsPerPurchase ? 'border-danger focus:ring-danger/20' : 'border-black/12 focus:ring-primary/20 focus:border-primary/50'}`}
+                      />
+                      {editErrors.ticketsPerPurchase && <p className="text-[11px] text-danger font-medium">{editErrors.ticketsPerPurchase}</p>}
+                    </div>
+                  </div>
+
+                  {/* Edit error */}
+                  {editError === 'conflict' ? (
+                    <div className="flex items-center justify-between gap-3 bg-danger/5 rounded-lg px-3 py-2">
+                      <p className="text-sm text-danger font-medium">
+                        This ticket type was updated by another admin. Please refresh the page.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => { cancelEdit(); loadGame(); }}
+                        className="shrink-0 text-xs font-bold text-danger border border-danger/30 hover:bg-danger/10
+                          px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        Refresh
+                      </button>
+                    </div>
+                  ) : editError ? (
+                    <p className="text-sm text-danger font-medium bg-danger/5 rounded-lg px-3 py-2">
+                      {editError}
+                    </p>
+                  ) : null}
+
+                  {/* Edit actions */}
+                  <div className="flex gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={cancelEdit}
+                      className="px-5 py-2.5 rounded-xl border border-black/12 text-sm font-semibold text-offblack/60 hover:text-offblack transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={editSaving}
+                      className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed
+                        text-white text-sm font-bold transition-all active:scale-[0.98] flex items-center gap-2"
+                    >
+                      {editSaving ? (
+                        <>
+                          <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Saving…
+                        </>
+                      ) : (
+                        'Save Changes →'
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
           </div>
         ) : (
           <div className="px-6 py-10 text-center text-offblack/40 text-sm">

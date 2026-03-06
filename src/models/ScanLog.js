@@ -44,4 +44,7 @@ const scanLogSchema = new mongoose.Schema({
   },
 });
 
+scanLogSchema.index({ ticketId: 1 });
+scanLogSchema.index({ gameId: 1 });
+
 module.exports = mongoose.model('ScanLog', scanLogSchema);

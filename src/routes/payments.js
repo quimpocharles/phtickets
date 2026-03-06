@@ -227,7 +227,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 
   } catch (err) {
     console.error('[webhook]', err);
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 
@@ -342,7 +342,7 @@ router.post('/process/:reservationId', async (req, res) => {
       });
     } catch (err) {
       console.error('[process] Ticket generation failed:', err.message);
-      return res.status(500).json({ success: false, message: `Ticket generation failed: ${err.message}` });
+      return res.status(500).json({ success: false, message: 'Ticket generation failed. Please contact support.' });
     }
 
     console.log('[process] Tickets generated successfully:', tickets.length);
@@ -372,7 +372,7 @@ router.post('/process/:reservationId', async (req, res) => {
 
   } catch (err) {
     console.error('[process]', err);
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 

@@ -5,6 +5,19 @@ const { scheduleEodReport } = require('./jobs/eodReport');
 
 const PORT = process.env.PORT || 3000;
 
+// ── Global error handlers ─────────────────────────────────────────────────────
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection:', reason);
+  process.exit(1);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
+  process.exit(1);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => {

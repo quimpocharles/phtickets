@@ -1,8 +1,9 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function PaymentFailurePage() {
+function FailureContent() {
   const searchParams = useSearchParams();
   const ref = searchParams.get('ref');
 
@@ -28,7 +29,7 @@ export default function PaymentFailurePage() {
 
         <div className="w-full flex flex-col gap-2 mt-2">
           <a
-            href="/tickets"
+            href="/"
             className="w-full bg-gray-900 hover:bg-gray-700 text-white text-sm font-semibold py-3 rounded-xl transition-colors text-center"
           >
             Try Again
@@ -42,5 +43,13 @@ export default function PaymentFailurePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PaymentFailurePage() {
+  return (
+    <Suspense>
+      <FailureContent />
+    </Suspense>
   );
 }

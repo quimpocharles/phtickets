@@ -7,6 +7,8 @@ const Order = require('../models/Order');
 const Ticket = require('../models/Ticket');
 const ScanLog = require('../models/ScanLog');
 const TicketReservation = require('../models/TicketReservation');
+const adminAuth = require('../middleware/adminAuth');
+const { requireScanner } = require('../middleware/roles');
 const {
   RESERVATION_TTL_SECONDS,
   CHECKOUT_WINDOW_SECONDS,
@@ -104,7 +106,7 @@ router.post('/reserve', async (req, res) => {
     });
   } catch (err) {
     await session.abortTransaction();
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   } finally {
     session.endSession();
   }
@@ -191,7 +193,7 @@ router.post('/purchase', async (req, res) => {
     await session.commitTransaction();
   } catch (err) {
     await session.abortTransaction();
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   } finally {
     session.endSession();
   }
@@ -244,7 +246,6 @@ router.post('/purchase', async (req, res) => {
     return res.status(502).json({
       success: false,
       message: 'Could not initiate payment. Please try again.',
-      debug: mayaError ?? err.message,
     });
   }
 });
@@ -268,7 +269,7 @@ router.get('/order/:reservationId', async (req, res) => {
 
     return res.json({ success: true, data: { order, tickets } });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 
@@ -306,14 +307,14 @@ router.get('/find', async (req, res) => {
 
     return res.json({ success: true, data: results });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /tickets/verify/:ticketId
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/verify/:ticketId', async (req, res) => {
+router.get('/verify/:ticketId', adminAuth, requireScanner, async (req, res) => {
   try {
     const ticket = await Ticket.findOne({ ticketId: req.params.ticketId })
       .populate({
@@ -439,7 +440,7 @@ router.get('/verify/:ticketId', async (req, res) => {
 
     return res.json({ success: true, message: 'Ticket is valid. Entry granted.', data: ticket });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 

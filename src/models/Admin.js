@@ -5,6 +5,8 @@ const adminSchema = new mongoose.Schema({
   email:     { type: String, required: true, unique: true, lowercase: true, trim: true },
   password:  { type: String, required: true },
   name:      { type: String, default: null },
+  role:      { type: String, enum: ['super_admin', 'admin', 'scanner'], default: 'admin' },
+  isDeleted: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
 });
 

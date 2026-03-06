@@ -20,4 +20,8 @@ const orderSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+orderSchema.index({ reservationId: 1 });
+orderSchema.index({ gameId: 1 });
+orderSchema.index({ buyerEmail: 1, buyerPhone: 1 });
+
 module.exports = mongoose.model('Order', orderSchema);

@@ -213,7 +213,7 @@ export default function FindTicketPage() {
 
         <p className="text-center text-xs text-gray-400 mt-8">
           Can&apos;t find your tickets?{' '}
-          <a href="/tickets" className="text-gray-600 hover:underline">Browse upcoming games</a>
+          <a href="/" className="text-gray-600 hover:underline">Browse upcoming games</a>
         </p>
       </div>
     </div>

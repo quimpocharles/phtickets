@@ -9,6 +9,7 @@ const ReportRecipient = require('../models/ReportRecipient');
 const Team = require('../models/Team');
 const { uploadBanner, uploadTeamLogo } = require('../services/cloudinary');
 const adminAuth = require('../middleware/adminAuth');
+const { requireSuperAdmin, requireAdmin } = require('../middleware/roles');
 const { generateGateReconciliationReport } = require('../services/gateReconciliationService');
 const ScanLog = require('../models/ScanLog');
 const Order = require('../models/Order');
@@ -23,7 +24,7 @@ router.get('/setup-status', async (_req, res) => {
     const count = await Admin.countDocuments();
     return res.json({ success: true, data: { setupRequired: count === 0 } });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 
@@ -49,10 +50,11 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Password must be at least 8 characters.' });
     }
 
-    const admin = await Admin.create({ name: name || null, email, password });
+    // First admin is always super_admin
+    const admin = await Admin.create({ name: name || null, email, password, role: 'super_admin' });
 
     const token = jwt.sign(
-      { sub: admin._id, email: admin.email },
+      { sub: admin._id, email: admin.email, role: admin.role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN ?? '8h' }
     );
@@ -61,11 +63,11 @@ router.post('/register', async (req, res) => {
       success: true,
       data: {
         token,
-        admin: { _id: admin._id, email: admin.email, name: admin.name },
+        admin: { _id: admin._id, email: admin.email, name: admin.name, role: admin.role },
       },
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 
@@ -84,9 +86,12 @@ router.post('/login', async (req, res) => {
     if (!admin || !(await admin.verifyPassword(password))) {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
+    if (admin.isDeleted) {
+      return res.status(403).json({ success: false, message: 'Account disabled.' });
+    }
 
     const token = jwt.sign(
-      { sub: admin._id, email: admin.email },
+      { sub: admin._id, email: admin.email, role: admin.role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN ?? '8h' }
     );
@@ -95,24 +100,148 @@ router.post('/login', async (req, res) => {
       success: true,
       data: {
         token,
-        admin: { _id: admin._id, email: admin.email, name: admin.name },
+        admin: { _id: admin._id, email: admin.email, name: admin.name, role: admin.role },
       },
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// All routes below this line require a valid JWT
+// All routes below this line require a valid JWT and at least the admin role.
+// Scanners are blocked from the admin panel entirely — they only use /tickets/verify.
 // ─────────────────────────────────────────────────────────────────────────────
-router.use(adminAuth);
+router.use(adminAuth, requireAdmin);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /admin/profile
 // ─────────────────────────────────────────────────────────────────────────────
 router.get('/profile', (req, res) => {
   res.json({ success: true, data: req.admin });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /admin/admins  — list all non-deleted admins (super_admin only)
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/admins', requireSuperAdmin, async (_req, res) => {
+  try {
+    const admins = await Admin.find()
+      .select('name email role createdAt isDeleted')
+      .sort({ createdAt: 1 });
+
+    const data = admins.map(({ _id, name, email, role, createdAt, isDeleted }) => ({
+      _id,
+      name,
+      email,
+      role,
+      createdAt,
+      status: isDeleted ? 'deleted' : 'active',
+    }));
+
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /admin/admins  — create a new admin or scanner account (super_admin only)
+// Body: { name?, email, password, role }
+// ─────────────────────────────────────────────────────────────────────────────
+router.post('/admins', requireSuperAdmin, async (req, res) => {
+  const { name, email, password, role } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ success: false, message: 'email and password are required.' });
+  }
+  if (password.length < 8) {
+    return res.status(400).json({ success: false, message: 'Password must be at least 8 characters.' });
+  }
+  if (!['admin', 'scanner'].includes(role)) {
+    return res.status(400).json({ success: false, message: "role must be 'admin' or 'scanner'." });
+  }
+
+  try {
+    const admin = await Admin.create({ name: name || null, email, password, role });
+    return res.status(201).json({
+      success: true,
+      data: { _id: admin._id, email: admin.email, name: admin.name, role: admin.role },
+    });
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({ success: false, message: 'An account with this email already exists.' });
+    }
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH /admin/admins/:id  — update role (super_admin only)
+// Body: { role }  — only 'admin' or 'scanner' are accepted (can't promote to super_admin)
+// ─────────────────────────────────────────────────────────────────────────────
+router.patch('/admins/:id', requireSuperAdmin, async (req, res) => {
+  const { role } = req.body;
+
+  if (!['admin', 'scanner'].includes(role)) {
+    return res.status(400).json({ success: false, message: "role must be 'admin' or 'scanner'." });
+  }
+
+  try {
+    const admin = await Admin.findOneAndUpdate(
+      { _id: req.params.id, isDeleted: false },
+      { $set: { role } },
+      { new: true, select: 'name email role createdAt' }
+    );
+
+    if (!admin) {
+      return res.status(404).json({ success: false, message: 'Admin not found.' });
+    }
+
+    return res.json({ success: true, data: admin });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE /admin/admins/:id  — soft-delete an admin account (super_admin only)
+// A super_admin cannot delete their own account.
+// ─────────────────────────────────────────────────────────────────────────────
+router.delete('/admins/:id', requireAdmin, async (req, res) => {
+  if (req.params.id === req.admin._id.toString()) {
+    return res.status(400).json({ success: false, message: 'You cannot delete your own account.' });
+  }
+
+  if (req.query.permanent === 'true' && req.admin.role !== 'super_admin') {
+    return res.status(403).json({ success: false, message: 'Insufficient permissions.' });
+  }
+
+  const permanent = req.query.permanent === 'true';
+
+  try {
+    if (permanent) {
+      const admin = await Admin.findByIdAndDelete(req.params.id);
+      if (!admin) {
+        return res.status(404).json({ success: false, message: 'Admin not found.' });
+      }
+      return res.json({ success: true, message: `Account "${admin.email}" has been permanently deleted.` });
+    }
+
+    const admin = await Admin.findOneAndUpdate(
+      { _id: req.params.id, isDeleted: false },
+      { $set: { isDeleted: true } },
+      { new: true }
+    );
+
+    if (!admin) {
+      return res.status(404).json({ success: false, message: 'Admin not found.' });
+    }
+
+    return res.json({ success: true, message: `Account "${admin.email}" has been deactivated.` });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
+  }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -123,7 +252,7 @@ router.get('/teams', async (_req, res) => {
     const teams = await Team.find().sort({ name: 1 });
     return res.json({ success: true, data: teams });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 
@@ -153,7 +282,7 @@ router.post('/teams', (req, res, next) => {
     if (err.code === 11000) {
       return res.status(409).json({ success: false, message: 'A team with this name already exists.' });
     }
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 
@@ -181,14 +310,14 @@ router.patch('/teams/:id', (req, res, next) => {
     if (err.code === 11000) {
       return res.status(409).json({ success: false, message: 'A team with this name already exists.' });
     }
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DELETE /admin/teams/:id
 // ─────────────────────────────────────────────────────────────────────────────
-router.delete('/teams/:id', async (req, res) => {
+router.delete('/teams/:id', requireSuperAdmin, async (req, res) => {
   try {
     const team = await Team.findByIdAndDelete(req.params.id);
     if (!team) {
@@ -196,7 +325,7 @@ router.delete('/teams/:id', async (req, res) => {
     }
     return res.json({ success: true, message: `Team "${team.name}" has been deleted.` });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 
@@ -231,7 +360,7 @@ router.post('/games', (req, res, next) => {
 
     return res.status(201).json({ success: true, data: game });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 
@@ -285,7 +414,109 @@ router.post('/games/:gameId/tickets', async (req, res) => {
 
     return res.status(201).json({ success: true, data: ticketTypes });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH /admin/games/:gameId/tickets/:ticketTypeId
+// Update a ticket type's editable fields.
+//
+// Optimistic concurrency control via Mongoose's __v (version key):
+//   • Client must supply the __v it last read.
+//   • The update filter includes { __v: clientVersion } so it only succeeds
+//     if no other write has incremented __v in the meantime.
+//   • On match: fields are updated and __v is atomically incremented.
+//   • On mismatch: findOneAndUpdate returns null → 409 conflict.
+// ─────────────────────────────────────────────────────────────────────────────
+router.patch('/games/:gameId/tickets/:ticketTypeId', async (req, res) => {
+  const { gameId, ticketTypeId } = req.params;
+  const { __v, name, price, quantity, scope, ticketsPerPurchase } = req.body;
+
+  if (__v === undefined || __v === null) {
+    return res.status(400).json({
+      success: false,
+      message: '__v (version) is required to prevent conflicting updates.',
+    });
+  }
+
+  // ── Validate and build the $set payload ───────────────────────────────────
+  const updates = {};
+
+  if (name !== undefined) {
+    if (!String(name).trim()) {
+      return res.status(400).json({ success: false, message: 'name cannot be empty.' });
+    }
+    updates.name = String(name).trim();
+  }
+  if (price !== undefined) {
+    if (Number(price) < 0) {
+      return res.status(400).json({ success: false, message: 'price must be 0 or greater.' });
+    }
+    updates.price = Number(price);
+  }
+  if (quantity !== undefined) {
+    if (!Number.isInteger(Number(quantity)) || Number(quantity) < 1) {
+      return res.status(400).json({ success: false, message: 'quantity must be a positive integer.' });
+    }
+    updates.quantity = Number(quantity);
+  }
+  if (scope !== undefined) {
+    if (!['day', 'all'].includes(scope)) {
+      return res.status(400).json({ success: false, message: "scope must be 'day' or 'all'." });
+    }
+    updates.scope = scope;
+  }
+  if (ticketsPerPurchase !== undefined) {
+    if (!Number.isInteger(Number(ticketsPerPurchase)) || Number(ticketsPerPurchase) < 1) {
+      return res.status(400).json({ success: false, message: 'ticketsPerPurchase must be a positive integer.' });
+    }
+    updates.ticketsPerPurchase = Number(ticketsPerPurchase);
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ success: false, message: 'No fields to update.' });
+  }
+
+  try {
+    // Guard: new quantity must not fall below tickets already sold.
+    // sold is only incremented by payment webhooks, so this check is stable.
+    if (updates.quantity !== undefined) {
+      const current = await TicketType.findOne({ _id: ticketTypeId, gameId });
+      if (!current) {
+        return res.status(404).json({ success: false, message: 'Ticket type not found.' });
+      }
+      if (updates.quantity < current.sold) {
+        return res.status(422).json({
+          success: false,
+          message: 'Cannot reduce ticket quantity below tickets already sold.',
+        });
+      }
+    }
+
+    // Atomic update: filter includes __v so any concurrent write invalidates this.
+    // $inc: { __v: 1 } advances the version on success.
+    const updated = await TicketType.findOneAndUpdate(
+      { _id: ticketTypeId, gameId, __v: Number(__v) },
+      { $set: updates, $inc: { __v: 1 } },
+      { new: true }
+    );
+
+    if (!updated) {
+      // Distinguish version conflict from a bad ID
+      const exists = await TicketType.exists({ _id: ticketTypeId, gameId });
+      if (!exists) {
+        return res.status(404).json({ success: false, message: 'Ticket type not found.' });
+      }
+      return res.status(409).json({
+        success: false,
+        message: 'Ticket type was modified by another admin.',
+      });
+    }
+
+    return res.json({ success: true, data: updated });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 
@@ -336,7 +567,7 @@ router.get('/games', async (req, res) => {
 
     return res.json({ success: true, data });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 
@@ -368,7 +599,7 @@ router.patch('/games/:gameId', (req, res, next) => {
 
     return res.json({ success: true, data: game });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 
@@ -377,7 +608,7 @@ router.patch('/games/:gameId', (req, res, next) => {
 // Remove a game, its ticket types, and any open reservations.
 // Orders and Tickets are retained for audit purposes.
 // ─────────────────────────────────────────────────────────────────────────────
-router.delete('/games/:gameId', async (req, res) => {
+router.delete('/games/:gameId', requireSuperAdmin, async (req, res) => {
   const { gameId } = req.params;
 
   try {
@@ -397,7 +628,7 @@ router.delete('/games/:gameId', async (req, res) => {
       message: `Game "${game.description}" and its ticket types have been deleted.`,
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 
@@ -405,7 +636,7 @@ router.delete('/games/:gameId', async (req, res) => {
 // GET /admin/orders
 // List all paid orders, newest first. Supports ?gameId= filter.
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/orders', adminAuth, async (req, res) => {
+router.get('/orders', async (req, res) => {
   try {
     const filter = { paymentStatus: 'paid' };
     if (req.query.gameId) filter.gameId = req.query.gameId;
@@ -418,7 +649,7 @@ router.get('/orders', adminAuth, async (req, res) => {
 
     return res.json({ success: true, data: orders });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 
@@ -480,7 +711,7 @@ router.get('/reports/gate/:gameId/export', async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     return res.send(csv);
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 
@@ -492,7 +723,7 @@ router.get('/report-recipients', async (_req, res) => {
     const recipients = await ReportRecipient.find().sort({ createdAt: 1 });
     return res.json({ success: true, data: recipients });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 
@@ -518,14 +749,14 @@ router.post('/report-recipients', async (req, res) => {
     if (err.code === 11000) {
       return res.status(409).json({ success: false, message: 'This email is already a recipient.' });
     }
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DELETE /admin/report-recipients/:id
 // ─────────────────────────────────────────────────────────────────────────────
-router.delete('/report-recipients/:id', async (req, res) => {
+router.delete('/report-recipients/:id', requireSuperAdmin, async (req, res) => {
   try {
     const recipient = await ReportRecipient.findByIdAndDelete(req.params.id);
     if (!recipient) {
@@ -536,7 +767,7 @@ router.delete('/report-recipients/:id', async (req, res) => {
       message: `${recipient.email} has been removed from the report recipients.`,
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 

@@ -9,4 +9,6 @@ const gameSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+gameSchema.index({ gameDate: 1 });
+
 module.exports = mongoose.model('Game', gameSchema);

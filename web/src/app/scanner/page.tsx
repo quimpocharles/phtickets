@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,6 +26,7 @@ interface ScanResult {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ScannerPage() {
+  const router          = useRouter();
   const videoRef        = useRef<HTMLVideoElement>(null);
   const isProcessingRef = useRef(false);   // blocks re-entry while verifying
   const stopCameraRef   = useRef<(() => void) | null>(null);
@@ -33,6 +34,14 @@ export default function ScannerPage() {
   const [phase,       setPhase]       = useState<ScanPhase>('scanning');
   const [scanResult,  setScanResult]  = useState<ScanResult | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [manualId,    setManualId]    = useState('');
+
+  // ── Auth guard ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!localStorage.getItem('adminToken')) {
+      router.replace('/admin/login');
+    }
+  }, [router]);
 
   // ── Verify a scanned ticketId against the API ──────────────────────────────
   const verifyTicket = useCallback(async (ticketId: string) => {
@@ -40,8 +49,16 @@ export default function ScannerPage() {
     isProcessingRef.current = true;
     setPhase('verifying');
 
+    const token = localStorage.getItem('adminToken');
+    if (!token) { router.replace('/admin/login'); return; }
+
     try {
-      const res  = await fetch(`${API_URL}/tickets/verify/${encodeURIComponent(ticketId)}`);
+      const res  = await fetch(`${API_URL}/tickets/verify/${encodeURIComponent(ticketId)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.status === 401) { router.replace('/admin/login'); return; }
+
       const json = await res.json();
 
       if (res.ok && json.success) {
@@ -58,7 +75,7 @@ export default function ScannerPage() {
       setScanResult({ phase: 'invalid', message: 'Server unreachable. Check your connection.', ticket: null });
       setPhase('invalid');
     }
-  }, []);
+  }, [router]);
 
   // ── Start camera + ZXing on mount ─────────────────────────────────────────
   useEffect(() => {
@@ -100,11 +117,28 @@ export default function ScannerPage() {
     return () => { mounted = false; stopCameraRef.current?.(); };
   }, [verifyTicket]);
 
+  // ── Manual entry submit ────────────────────────────────────────────────────
+  function handleManualSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const id = manualId.trim();
+    if (!id) return;
+    verifyTicket(id);
+  }
+
   // ── Reset to scanning ──────────────────────────────────────────────────────
   function reset() {
     isProcessingRef.current = false;
     setScanResult(null);
     setPhase('scanning');
+    setManualId('');
+  }
+
+  // ── Sign out ───────────────────────────────────────────────────────────────
+  function handleSignOut() {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminRole');
+    localStorage.removeItem('adminId');
+    router.replace('/admin/login');
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -142,33 +176,60 @@ export default function ScannerPage() {
       )}
 
       {/* ── Header ── */}
-      <div className="relative z-10 flex items-center gap-3 px-4 pt-4 pb-2">
-        <Link
-          href="/tickets"
-          className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
-        >
-          <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </Link>
+      <div className="relative z-10 flex items-center justify-between px-4 pt-4 pb-2">
         <div>
           <p className="text-white font-bold text-sm leading-none">QR Scanner</p>
           <p className="text-white/40 text-xs mt-0.5">NBTC Ticket Verification</p>
         </div>
+        <button
+          onClick={handleSignOut}
+          className="text-white/50 hover:text-white text-xs font-medium transition-colors"
+        >
+          Sign out
+        </button>
       </div>
 
       {/* ── Prompt / status text (mid-screen) ── */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-end pb-56 pointer-events-none">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-end pb-4 pointer-events-none">
         {phase === 'scanning' && !cameraError && (
-          <p className="text-white/60 text-sm font-medium">Align QR code within the frame</p>
+          <p className="text-white/60 text-sm font-medium mb-48">Align QR code within the frame</p>
         )}
         {phase === 'verifying' && (
-          <div className="flex flex-col items-center gap-3">
+          <div className="flex flex-col items-center gap-3 mb-48">
             <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
             <p className="text-white/70 text-sm font-medium">Verifying ticket…</p>
           </div>
         )}
       </div>
+
+      {/* ── Manual entry ── */}
+      {(phase === 'scanning' || phase === 'verifying') && !cameraError && (
+        <div className="relative z-10 px-4 pb-6">
+          <p className="text-center text-white/30 text-[11px] font-medium uppercase tracking-widest mb-2">
+            Or enter ticket ID manually
+          </p>
+          <form onSubmit={handleManualSubmit} className="flex gap-2">
+            <input
+              type="text"
+              value={manualId}
+              onChange={(e) => setManualId(e.target.value.toUpperCase())}
+              placeholder="NBTC26-000001"
+              disabled={phase === 'verifying'}
+              className="flex-1 bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white text-sm font-mono
+                placeholder:text-white/25 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/40
+                disabled:opacity-40 transition-all"
+            />
+            <button
+              type="submit"
+              disabled={!manualId.trim() || phase === 'verifying'}
+              className="bg-accent hover:bg-accent/90 disabled:opacity-40 text-offblack font-bold px-5 py-3
+                rounded-xl transition-all active:scale-[0.97]"
+            >
+              →
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* ── Camera error state ── */}
       {cameraError && (

@@ -44,7 +44,9 @@ export default function LoginForm() {
       }
 
       localStorage.setItem('adminToken', json.data.token);
-      router.replace('/admin');
+      localStorage.setItem('adminRole', json.data.admin.role);
+      localStorage.setItem('adminId',   json.data.admin._id);
+      router.replace(json.data.admin.role === 'scanner' ? '/scanner' : '/admin');
     } catch {
       setError('Could not reach the server. Please try again.');
     } finally {

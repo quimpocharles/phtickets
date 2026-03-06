@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { Suspense, useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 
@@ -32,7 +32,7 @@ interface Order {
   };
 }
 
-export default function PaymentSuccessPage() {
+function SuccessContent() {
   const searchParams = useSearchParams();
   const ref = searchParams.get('ref');
 
@@ -110,7 +110,7 @@ export default function PaymentSuccessPage() {
         <p className="text-gray-500 text-sm text-center max-w-sm">
           Your tickets are being processed. Check your email — we&apos;ll send your QR codes there shortly.
         </p>
-        <a href="/tickets" className="mt-2 text-gray-500 text-sm hover:underline">
+        <a href="/" className="mt-2 text-gray-500 text-sm hover:underline">
           ← Back to games
         </a>
       </div>
@@ -141,7 +141,7 @@ export default function PaymentSuccessPage() {
 
       {/* ── Actions bar (screen only) ── */}
       <div className="no-print max-w-sm mx-auto mb-6 flex items-center justify-between">
-        <a href="/tickets" className="text-sm text-gray-500 hover:text-gray-700">
+        <a href="/" className="text-sm text-gray-500 hover:text-gray-700">
           ← Back to games
         </a>
         <button
@@ -254,6 +254,14 @@ export default function PaymentSuccessPage() {
       </div>
 
     </div>
+  );
+}
+
+export default function PaymentSuccessPage() {
+  return (
+    <Suspense>
+      <SuccessContent />
+    </Suspense>
   );
 }
 

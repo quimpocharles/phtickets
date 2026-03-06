@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 // Pages that render full-screen without the sidebar shell
 const BARE_ROUTES = ['/admin/login', '/admin/setup'];
@@ -73,6 +74,22 @@ const NAV = [
     ],
   },
   {
+    section: 'Access',
+    superAdminOnly: true,
+    items: [
+      {
+        label: 'Users',
+        href: '/admin/admins',
+        icon: (
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round"
+              d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        ),
+      },
+    ],
+  },
+  {
     section: 'Reports',
     items: [
       {
@@ -103,6 +120,11 @@ const NAV = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router   = useRouter();
+  const [adminRole, setAdminRole] = useState('');
+
+  useEffect(() => {
+    setAdminRole(localStorage.getItem('adminRole') ?? '');
+  }, []);
 
   if (BARE_ROUTES.includes(pathname)) {
     return <>{children}</>;
@@ -110,6 +132,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   function handleSignOut() {
     localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminRole');
+    localStorage.removeItem('adminId');
     router.replace('/admin/login');
   }
 
@@ -142,7 +166,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 flex flex-col gap-6">
-          {NAV.map((group) => (
+          {NAV.filter((group) => !group.superAdminOnly || adminRole === 'super_admin').map((group) => (
             <div key={group.section}>
               <p className="text-[10px] font-bold uppercase tracking-widest text-offblack/30 px-2 mb-1.5">
                 {group.section}

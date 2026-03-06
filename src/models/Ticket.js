@@ -10,4 +10,7 @@ const ticketSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+ticketSchema.index({ orderId: 1 });
+ticketSchema.index({ gameId: 1 });
+
 module.exports = mongoose.model('Ticket', ticketSchema);

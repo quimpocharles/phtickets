@@ -79,7 +79,8 @@ router.get('/', async (req, res) => {
 
     res.json({ success: true, data: result });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('[games]', err);
+    res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 
