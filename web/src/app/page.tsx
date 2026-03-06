@@ -1,5 +1,14 @@
 import { redirect } from 'next/navigation';
+import { getGames } from '@/lib/api';
 
-export default function Home() {
-  redirect('/tickets/69a9c6096e37e85b0f469b45');
+export default async function Home() {
+  try {
+    const games = await getGames();
+    if (games.length > 0) {
+      redirect(`/tickets/${games[0]._id}`);
+    }
+  } catch {
+    // fall through if API is unreachable
+  }
+  redirect('/tickets');
 }
