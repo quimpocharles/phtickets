@@ -148,7 +148,7 @@ export default async function GameDetailPage({ params }: Props) {
         {/* Breadcrumb */}
         <nav className="flex items-center gap-1.5 text-xs text-offblack/40 mb-6">
           <Link href="/" className="hover:text-primary transition-colors">
-            Upcoming Games
+            Upcoming Games 
           </Link>
           <span>/</span>
           <span className="text-offblack/70 font-medium">
