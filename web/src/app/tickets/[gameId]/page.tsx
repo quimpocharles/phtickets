@@ -22,6 +22,8 @@ interface Props {
   params: { gameId: string };
 }
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tickets.globalhoops.com';
+
 export async function generateMetadata({ params }: Props) {
   const game = await getGame(params.gameId);
   if (!game) return {};
@@ -29,17 +31,35 @@ export async function generateMetadata({ params }: Props) {
   const date = new Date(game.gameDate).toLocaleDateString('en-PH', {
     month: 'long', day: 'numeric', year: 'numeric',
   });
-  const title = `${game.description} — Tickets`;
-  const description = `Buy tickets for ${game.description} on ${date} at ${game.venue}. Official Global Hoops ticket store. No log-in needed.`;
-  const image = game.bannerImage ?? '/smart-gh.jpg';
+  const endDate = new Date(game.eventEndDate).toLocaleDateString('en-PH', {
+    month: 'long', day: 'numeric', year: 'numeric',
+  });
+  const dateRange = date === endDate ? date : `${date} – ${endDate}`;
+  const title = `${game.description} — Official Tickets`;
+  const description =
+    `Get your official Smart Global Hoops International Showcase tickets for ${game.description}. ` +
+    `${dateRange} at ${game.venue}. Secure checkout via Maya — no log-in needed. ` +
+    `Visa, Mastercard, JCB, Amex & QR Ph accepted.`;
+  const image = game.bannerImage ?? '/gh-marquee.png';
+  const pageUrl = `${APP_URL}/tickets/${game._id}`;
 
   return {
     title,
     description,
+    keywords: [
+      'Global Hoops tickets', 'Smart Global Hoops', 'Global Hoops International Showcase tickets',
+      'basketball tickets Philippines', game.venue, game.description,
+      'buy basketball tickets online', 'Maya payment tickets',
+    ],
+    alternates: { canonical: pageUrl },
     openGraph: {
+      type: 'website',
       title,
       description,
-      images: [{ url: image, alt: game.description }],
+      url: pageUrl,
+      siteName: 'Global Hoops Tickets',
+      locale: 'en_PH',
+      images: [{ url: image, width: 1200, height: 630, alt: `${game.description} — Smart Global Hoops International Showcase` }],
     },
     twitter: {
       card: 'summary_large_image',
@@ -75,8 +95,58 @@ export default async function GameDetailPage({ params }: Props) {
     gameDate.getMonth()    === endDate.getMonth()    &&
     gameDate.getDate()     === endDate.getDate();
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SportsEvent',
+    name: game.description,
+    startDate: game.gameDate,
+    endDate: game.eventEndDate,
+    eventStatus: 'https://schema.org/EventScheduled',
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    location: {
+      '@type': 'Place',
+      name: game.venue,
+      address: { '@type': 'PostalAddress', addressCountry: 'PH', addressLocality: 'Philippines' },
+    },
+    image: [game.bannerImage ?? `${APP_URL}/gh-marquee.png`],
+    description:
+      `Official Smart Global Hoops International Showcase. ` +
+      `Buy tickets for ${game.description} at ${game.venue}. ` +
+      `Secure checkout via Maya — no log-in needed.`,
+    organizer: {
+      '@type': 'Organization',
+      name: 'Global Hoops International',
+      url: APP_URL,
+      sameAs: [
+        'https://www.facebook.com/profile.php?id=61571452187788',
+        'https://www.instagram.com/globalhoopsint',
+      ],
+    },
+    sponsor: { '@type': 'Organization', name: 'Smart Communications' },
+    sport: 'Basketball',
+    url: `${APP_URL}/tickets/${game._id}`,
+    offers: game.ticketTypes.map((tt) => ({
+      '@type': 'Offer',
+      name: tt.name,
+      price: tt.price,
+      priceCurrency: 'PHP',
+      availability: tt.available > 0
+        ? 'https://schema.org/InStock'
+        : 'https://schema.org/SoldOut',
+      url: `${APP_URL}/tickets/${game._id}`,
+      validFrom: game.createdAt,
+      seller: { '@type': 'Organization', name: 'Global Hoops International' },
+    })),
+  };
+
   return (
     <div>
+      {/* ── JSON-LD Event structured data ── */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       {/* ── Banner ── */}
       <div className="w-full bg-offblack ">
         <div className="flex min-h-[200px] sm:min-h-[240px]">

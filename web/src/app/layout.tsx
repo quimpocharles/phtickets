@@ -35,7 +35,7 @@ export const metadata: Metadata = {
       'Secure checkout powered by Maya.',
     images: [
       {
-        url: '/smart-gh.jpg',
+        url: '/gh-marquee.png',
         width: 1200,
         height: 630,
         alt: 'Smart x Global Hoops International Showcase — Official Ticket Store',
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Global Hoops Tickets — Official Ticket Store',
     description: 'Buy official Smart Global Hoops International Showcase tickets online. No log-in needed.',
-    images: ['/smart-gh.jpg'],
+    images: ['/gh-marquee.png'],
   },
 
   // ── Icons ──────────────────────────────────────────────────────────────────
@@ -73,10 +73,26 @@ export const metadata: Metadata = {
   },
 };
 
+const orgJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Global Hoops International',
+  url: process.env.NEXT_PUBLIC_APP_URL ?? 'https://tickets.globalhoops.com',
+  logo: `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://tickets.globalhoops.com'}/favico.png`,
+  sameAs: [
+    'https://www.facebook.com/profile.php?id=61571452187788',
+    'https://www.instagram.com/globalhoopsint',
+  ],
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className="overflow-x-hidden">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        />
         <Navbar />
         <main className="min-h-screen">{children}</main>
         <Footer />

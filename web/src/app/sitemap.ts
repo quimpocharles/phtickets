@@ -5,8 +5,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const url = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tickets.globalhoops.com';
 
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
-    { url: `${url}/tickets/find`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
+    { url, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
+    { url: `${url}/tickets/find`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.4 },
+    { url: `${url}/legal`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.2 },
   ];
 
   try {
@@ -15,7 +16,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${url}/tickets/${g._id}`,
       lastModified: new Date(),
       changeFrequency: 'hourly',
-      priority: 0.9,
+      priority: 1.0,
     }));
     return [...staticRoutes, ...gameRoutes];
   } catch {
