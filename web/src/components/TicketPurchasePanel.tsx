@@ -53,7 +53,7 @@ export default function TicketPurchasePanel({ game }: Props) {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const remaining = selectedType ? selectedType.available : 0;
-  const maxQty = Math.min(remaining, 15);
+  const maxQty = Math.min(remaining, 25);
   const total = selectedType ? selectedType.price * quantity : 0;
   const overLimit = quantity > remaining;
   const expired = reservation !== null && timeLeft === 0;
