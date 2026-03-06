@@ -49,7 +49,7 @@ services/
   cloudinary.js    uploadQRCode helper
   reportService.js EOD sales report generation
 utils/
-  generateTickets.js  Counter → format NBTC26-XXXXXX → QR buffer → Cloudinary → Ticket.insertMany
+  generateTickets.js  Counter → format GH26-XXXXXX → QR buffer → Cloudinary → Ticket.insertMany
   orderNumber.js      ORD-YYYYMMDD-XXXXX
 jobs/eodReport.js  node-cron scheduled EOD report email
 middleware/adminAuth.js  JWT verification for /admin routes
@@ -67,7 +67,7 @@ middleware/adminAuth.js  JWT verification for /admin routes
 
 ### Ticket ID & QR codes
 
-- Format: `NBTC26-000001` (sequential via `Counter` collection, update `YEAR` constant in `generateTickets.js` each season)
+- Format: `GH26-000001` (sequential via `Counter` collection, update `YEAR` constant in `generateTickets.js` each season)
 - QR content is the plain ticket ID string (not a URL) to prevent accidental redemption from camera apps
 - `scope=day` tickets: marked `status=used` on first scan; `scope=all` (VIP): per-day `ScanLog` check, ticket never marked used
 

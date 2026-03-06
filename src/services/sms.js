@@ -12,7 +12,7 @@ async function sendSMS(to, body) {
     apikey: process.env.SEMAPHORE_API_KEY,
     number: to,
     message: body,
-    sendername: process.env.SEMAPHORE_SENDER_NAME || 'NBTC',
+    sendername: process.env.SEMAPHORE_SENDER_NAME || 'GlobalHoops',
   });
 
   const response = await axios.post(SEMAPHORE_URL, params.toString(), {
@@ -32,7 +32,7 @@ async function sendTicketSMS({ phone, buyerName, orderNumber, game }) {
     year: 'numeric',
   });
   const msg =
-    `Hi ${buyerName || 'there'}! Your NBTC tickets (Order ${orderNumber}) ` +
+    `Hi ${buyerName || 'there'}! Your Global Hoops tickets (Order ${orderNumber}) ` +
     `for ${game.description} on ${date} are confirmed. ` +
     `Check your email for QR codes.`;
 

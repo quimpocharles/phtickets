@@ -45,10 +45,10 @@ export default function TicketTypeCard({ ticketType, selected, onClick }: Props)
   return (
     <div className="group/wrapper relative pb-3 pr-3">
 
-      {/* ── Background card layer — slightly darker blue for depth ── */}
+      {/* ── Background card layer — slightly darker for depth ── */}
       <div
         aria-hidden
-        className={`absolute top-3 left-3 bottom-0 right-0 rounded-xl bg-[#011f85] transition-all duration-200
+        className={`absolute top-3 left-3 bottom-0 right-0 rounded-xl bg-black transition-all duration-200
           ${!soldOut ? 'group-hover/wrapper:translate-x-[3px] group-hover/wrapper:translate-y-[3px]' : ''}`}
         style={soldOut ? { opacity: 0.4 } : undefined}
       />
@@ -63,7 +63,7 @@ export default function TicketTypeCard({ ticketType, selected, onClick }: Props)
           ${soldOut
             ? 'cursor-not-allowed bg-[#f3f4f6] focus-visible:ring-black/20'
             : selected
-              ? 'bg-[#0133ae] transition-all duration-200 hover:-translate-y-[3px] hover:shadow-xl focus-visible:ring-white/60'
+              ? 'bg-offblack transition-all duration-200 hover:-translate-y-[3px] hover:shadow-xl focus-visible:ring-white/60'
               : 'bg-white transition-all duration-200 hover:-translate-y-[3px] hover:shadow-lg focus-visible:ring-primary/40'
           }`}
         style={selected && !soldOut ? { borderLeftWidth: '6px', borderLeftColor: '#fed000' } : undefined}
@@ -144,7 +144,7 @@ export default function TicketTypeCard({ ticketType, selected, onClick }: Props)
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">Sold Out</span>
               ) : selected ? (
                 <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center shrink-0">
-                  <svg className="w-3 h-3 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <svg className="w-3 h-3 text-offblack" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 </span>

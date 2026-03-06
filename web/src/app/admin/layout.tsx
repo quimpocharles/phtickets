@@ -162,7 +162,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </svg>
             </div>
             <div>
-              <p className="font-black text-offblack text-sm leading-none">NBTC Admin</p>
+              <p className="font-black text-offblack text-sm leading-none">Global Hoops Admin</p>
               <p className="text-[10px] text-offblack/40 mt-0.5">Ticketing System</p>
             </div>
           </div>
@@ -226,7 +226,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
             </svg>
           </div>
-          <span className="text-white font-black text-base tracking-tight">NBTC Admin</span>
+          <span className="text-white font-black text-base tracking-tight">Global Hoops Admin</span>
         </div>
         <button
           onClick={handleSignOut}

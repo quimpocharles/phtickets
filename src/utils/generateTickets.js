@@ -6,7 +6,7 @@ const { uploadQRCode } = require('../services/cloudinary');
 const YEAR = '26'; // update each season
 
 function formatTicketId(seq) {
-  return `NBTC${YEAR}-${String(seq).padStart(6, '0')}`;
+  return `GH${YEAR}-${String(seq).padStart(6, '0')}`;
 }
 
 /**

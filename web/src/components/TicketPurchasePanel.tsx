@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import type { Game, TicketType } from '@/types';
 import TicketTypeCard from './TicketTypeCard';
 import { purchaseTickets } from '@/lib/api';
@@ -130,8 +131,8 @@ export default function TicketPurchasePanel({ game }: Props) {
       {/* ── No ticket selected ── */}
       {!selectedType && (
         <div className="rounded-2xl border-2 border-dashed border-black/15 p-8 flex flex-col items-center justify-center text-center gap-2 min-h-[220px]">
-          <div className="w-10 h-10 rounded-full bg-primary/8 flex items-center justify-center mb-1">
-            <svg className="w-5 h-5 text-primary/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="w-10 h-10 rounded-full bg-black/8 flex items-center justify-center mb-1">
+            <svg className="w-5 h-5 text-offblack/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                 d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
             </svg>
@@ -144,7 +145,7 @@ export default function TicketPurchasePanel({ game }: Props) {
       {/* ── Reservation countdown ── */}
       {selectedType && reservation && (
         <div className="rounded-2xl bg-white border border-black/8 shadow-sm overflow-hidden animate-fade-in-up">
-          <div className={`px-5 py-4 ${expired ? 'bg-offblack' : 'bg-primary'}`}>
+          <div className="px-5 py-4 bg-offblack">
             <p className="text-xs font-bold uppercase tracking-widest text-white/60 mb-0.5">
               {expired ? 'Reservation Expired' : 'Reservation Confirmed'}
             </p>
@@ -166,7 +167,7 @@ export default function TicketPurchasePanel({ game }: Props) {
                 <button
                   type="button"
                   onClick={() => { setReservation(null); setSelectedType(null); setDrawerOpen(false); }}
-                  className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98]"
+                  className="w-full bg-offblack hover:bg-black text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98]"
                 >
                   Choose Tickets Again
                 </button>
@@ -190,7 +191,7 @@ export default function TicketPurchasePanel({ game }: Props) {
 
                 <a
                   href={reservation.checkoutUrl}
-                  className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-center"
+                  className="w-full bg-offblack hover:bg-black text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-center"
                 >
                   Continue to Payment →
                 </a>
@@ -216,7 +217,7 @@ export default function TicketPurchasePanel({ game }: Props) {
           noValidate
           className="rounded-2xl bg-white border border-black/8 shadow-sm overflow-hidden animate-fade-in-up"
         >
-          <div className="bg-primary px-5 py-4">
+          <div className="bg-offblack px-5 py-4">
             <p className="text-xs font-bold uppercase tracking-widest text-white/60 mb-0.5">Order Summary</p>
             <p className="text-white font-black text-lg leading-tight">{selectedType.name.toUpperCase()}</p>
             <p className="text-white/70 text-sm">{game.description}</p>
@@ -278,7 +279,7 @@ export default function TicketPurchasePanel({ game }: Props) {
             <button
               type="submit"
               disabled={loading || overLimit || !agreedToTerms}
-              className="w-full bg-primary hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed
+              className="w-full bg-offblack hover:bg-black disabled:opacity-60 disabled:cursor-not-allowed
                 text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2"
             >
               {loading ? (
@@ -301,8 +302,44 @@ export default function TicketPurchasePanel({ game }: Props) {
     </div>
   );
 
+  const gameDate = new Date(game.gameDate);
+  const endDate  = new Date(game.eventEndDate);
+  const sameDay  =
+    gameDate.getFullYear() === endDate.getFullYear() &&
+    gameDate.getMonth()    === endDate.getMonth()    &&
+    gameDate.getDate()     === endDate.getDate();
+  const dateStr    = gameDate.toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const timeStr    = gameDate.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const endDateStr = endDate.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
+
   return (
     <>
+      {/* Game details card — full width on desktop, compact with image on mobile */}
+      <div className="mb-6 rounded-2xl bg-offblack overflow-hidden inline-flex md:flex items-stretch w-auto md:w-full">
+        <div className="p-4 flex flex-col gap-3 flex-1">
+          <h2 className="font-black uppercase text-white text-base leading-tight">{game.description}</h2>
+          <div className="flex flex-col gap-1.5 text-sm">
+            <div className="flex items-center gap-2 text-white/60">
+              <svg className="w-4 h-4 shrink-0 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>{sameDay ? `${dateStr} · ${timeStr}` : `${dateStr} – ${endDateStr}`}</span>
+            </div>
+            <div className="flex items-center gap-2 text-white/60">
+              <svg className="w-4 h-4 shrink-0 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span>{game.venue}</span>
+            </div>
+          </div>
+        </div>
+        {/* Image — mobile only */}
+        <div className="md:hidden relative w-28 shrink-0">
+          <Image src="/smart-gh.jpg" alt="Smart x Global Hoops" fill className="object-cover" />
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6 md:gap-10">
         {/* Left — Ticket type selection */}
         <div className="md:col-span-3">
@@ -339,7 +376,7 @@ export default function TicketPurchasePanel({ game }: Props) {
         type="button"
         aria-label="Open order summary"
         onClick={() => setDrawerOpen(true)}
-        className="md:hidden fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full bg-offblack text-white shadow-lg flex items-center justify-center"
+        className="md:hidden fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full bg-primary text-white shadow-lg flex items-center justify-center"
       >
         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />

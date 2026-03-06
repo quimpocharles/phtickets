@@ -1,4 +1,4 @@
-# NBTC Ticketing System — Documentation
+# Global Hoops Ticketing System — Documentation
 
 ## Table of Contents
 
@@ -30,7 +30,7 @@
 
 ## Overview
 
-A full-stack basketball ticketing platform built for NBTC. Fans browse upcoming games, select ticket types, and pay via Maya. Upon successful payment, individual QR-coded tickets are generated, uploaded to Cloudinary, and delivered by email and SMS.
+A full-stack basketball ticketing platform built for Global Hoops International. Fans browse upcoming games, select ticket types, and pay via Maya. Upon successful payment, individual QR-coded tickets are generated, uploaded to Cloudinary, and delivered by email and SMS.
 
 Admin staff manage games, teams, and ticket types through a protected dashboard. Gate staff scan QR codes at the venue using a real-time camera scanner. Administrators receive automated End-of-Day transaction reports by email with a CSV attachment.
 
@@ -184,7 +184,7 @@ SMTP_PASS=
 EMAIL_FROM=noreply@yourdomain.com   # must match SMTP_USER
 
 SEMAPHORE_API_KEY=
-SEMAPHORE_SENDER_NAME=NBTC
+SEMAPHORE_SENDER_NAME=GlobalHoops
 
 MAYA_PUBLIC_KEY=               # pk-... (used for createCheckout)
 MAYA_SECRET_KEY=               # sk-... (used for getPaymentStatus)
@@ -295,7 +295,7 @@ npm run dev
 
 ```js
 {
-  ticketId:     String,       // NBTC26-000001
+  ticketId:     String,       // GH26-000001
   orderId:      ObjectId → Order,
   gameId:       ObjectId → Game,
   ticketTypeId: ObjectId → TicketType,
@@ -640,9 +640,10 @@ Protected by JWT stored in `localStorage`. All requests include `Authorization: 
 
 | Component | Description |
 |---|---|
-| `Navbar` | Floating frosted-glass navbar (Apple-style); shrinks on scroll; logo centred |
-| `TicketTypeCard` | Ticket tier card with stacked design, urgency starburst badge, three states (default / selected / sold-out) |
-| `TicketPurchasePanel` | Desktop/tablet: two-column layout. Mobile: full-width ticket list + floating cart button opens side drawer. Includes required Terms & Privacy checkbox that must be ticked before "Proceed to Payment" is enabled |
+| `Navbar` | Dark pill navbar; Smart logo + "GLOBAL HOOPS INTL/INTERNATIONAL" in Anton font; mobile burger menu reveals Find My Tickets; shrinks on scroll |
+| `Footer` | Single-row footer: copyright + Terms & Privacy on left; "Let's get Social!" + Facebook + Instagram links on right |
+| `TicketTypeCard` | Ticket tier card with stacked design, urgency starburst badge, three states (default / selected / sold-out); selected state uses offblack |
+| `TicketPurchasePanel` | Includes game details card (full-width on desktop, compact with portrait image on mobile). Desktop/tablet: two-column layout. Mobile: full-width ticket list + floating blue cart button opens side drawer. Required Terms & Privacy checkbox blocks "Proceed to Payment" until ticked |
 | `GameCard` | Game tile with banner, description, venue, date |
 | `Badge` | Urgency badge renderer |
 | `TeamSearchDropdown` | Searchable team selector used in game creation form |
@@ -650,16 +651,23 @@ Protected by JWT stored in `localStorage`. All requests include `Authorization: 
 ### Banner Design
 
 The game detail page banner (`/tickets/:gameId`) uses a ticket-stub layout:
-- **Left**: dark background, yellow "NBTC Tickets" label, large white game title, tagline (visible on all screen sizes)
-- **Bottom strip**: scrolling marquee (CSS animation) — `landing.png` thumbnail → date chip (yellow) → venue (blue) → game description (red), loops infinitely
-- **Right panel**: dashed separator, `smart-nbtc-por.png` logo, off-white background
-- Bottom of banner: dashed primary-blue border (matching ticket card weight)
+- **Left**: off-black background, yellow "Global Hoops International Tickets" label, large white game title, tagline (visible on all screen sizes)
+- **Bottom strip**: scrolling marquee (CSS animation, Anton font) — date chip (yellow) → venue (blue) → "Global Hoops International Showcase" (black); loops infinitely
+- **Right panel**: `smart-gh.jpg` full-cover image, black background; hidden on mobile
+
+### Game Details Card
+
+Displayed above the ticket type list inside `TicketPurchasePanel`:
+- **Desktop**: full-width off-black card showing game title, date, and venue; no image
+- **Mobile**: compact `inline-flex` card with text on left and `smart-gh.jpg` portrait image on right
 
 ### Ticket ID Format
 
-`NBTC26-000001` — prefix `NBTC` + 2-digit year + 6-digit zero-padded sequential counter
+`GH26-000001` — prefix `GH` + 2-digit year + 6-digit zero-padded sequential counter
 
 Stored in the `counters` MongoDB collection, incremented atomically via `Counter.nextSeq()`.
+
+To reset ticket data and counter (e.g. on rebrand): `node scripts/reset-tickets.js`
 
 ---
 
@@ -739,6 +747,6 @@ Auto-generated at runtime:
 - `/robots.txt` — blocks `/admin/` and `/scanner/`; links to sitemap
 - `/sitemap.xml` — includes home, find tickets, and all game pages with `hourly` revalidation
 
-Favicon: `/nbtc-logo.jpg` (served from `web/src/app/icon.jpg` via Next.js App Router convention).
+Favicon: `/favico.png` (served from `web/src/app/icon.png` via Next.js App Router convention).
 
 Open Graph and Twitter card metadata are set globally in `layout.tsx` and overridden per game page via `generateMetadata()`.

@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next';
 import { getGames } from '@/lib/api';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const url = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tickets.nbtc.com';
+  const url = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tickets.globalhoops.com';
 
   const staticRoutes: MetadataRoute.Sitemap = [
     { url, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },

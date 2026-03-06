@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-// Used to generate sequential ticket IDs (e.g. NBTC26-000001)
+// Used to generate sequential ticket IDs (e.g. GH26-000001)
 const counterSchema = new mongoose.Schema({
   _id: { type: String, required: true },
   seq: { type: Number, default: 0 },

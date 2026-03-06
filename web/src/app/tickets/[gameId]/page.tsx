@@ -1,8 +1,10 @@
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
-import Link from 'next/link';
+import { Anton } from 'next/font/google';
 import { getGame, getGames } from '@/lib/api';
 import TicketPurchasePanel from '@/components/TicketPurchasePanel';
+
+const anton = Anton({ weight: '400', subsets: ['latin'], display: 'swap' });
 
 export const revalidate = 60;
 
@@ -28,8 +30,8 @@ export async function generateMetadata({ params }: Props) {
     month: 'long', day: 'numeric', year: 'numeric',
   });
   const title = `${game.description} — Tickets`;
-  const description = `Buy tickets for ${game.description} on ${date} at ${game.venue}. Official NBTC ticket store. No log-in needed.`;
-  const image = game.bannerImage ?? '/nbtc-smart.png';
+  const description = `Buy tickets for ${game.description} on ${date} at ${game.venue}. Official Global Hoops ticket store. No log-in needed.`;
+  const image = game.bannerImage ?? '/smart-gh.jpg';
 
   return {
     title,
@@ -83,7 +85,7 @@ export default async function GameDetailPage({ params }: Props) {
           <div className="flex-1 flex flex-col justify-between pt-20 overflow-hidden">
             <div className="py-7 px-6 sm:px-10">
               <p className="text-accent font-black uppercase tracking-widest text-xs sm:text-sm mb-2">
-                NBTC Tickets
+                Global Hoops International Tickets
               </p>
               <h1 className="text-white font-black uppercase text-2xl sm:text-4xl leading-tight mb-2 max-w-2xl">
                 {game.description}
@@ -107,26 +109,26 @@ export default async function GameDetailPage({ params }: Props) {
                 {[0, 1].map((i) => (
                   <div key={i} className="flex items-stretch h-full">
                     {/* Image thumbnail */}
-                    <div className="relative w-28 sm:w-44 shrink-0 overflow-hidden">
-                      <Image src="/landing.png" alt="" fill className="object-cover object-top" />
-                    </div>
+                    {/* <div className="relative w-28 sm:w-44 shrink-0 overflow-hidden">
+                      <Image src="/smart-gh.jpg" alt="" fill className="object-cover" />
+                    </div> */}
 
                     {/* Date */}
                     <div className="bg-accent flex items-center justify-center px-6 shrink-0">
-                      <span className="font-bold text-offblack text-base sm:text-lg whitespace-nowrap">
+                      <span className={`${anton.className} uppercase text-offblack text-base sm:text-lg whitespace-nowrap`}>
                         {sameDay ? dateStr : `${dateStr} – ${endDateStr}`}
                       </span>
                     </div>
 
                     {/* Venue */}
                     <div className="bg-primary flex items-center justify-center px-6 shrink-0">
-                      <span className="text-white text-base sm:text-lg font-semibold whitespace-nowrap">{game.venue}</span>
+                      <span className={`${anton.className} uppercase text-white text-base sm:text-lg whitespace-nowrap`}>{game.venue}</span>
                     </div>
 
-                    {/* Game description */}
-                    <div className="bg-danger flex items-center justify-center px-6 shrink-0">
-                      <span className="text-white text-base sm:text-lg font-black uppercase whitespace-nowrap tracking-wide">
-                        {game.description}
+                    {/* Event name */}
+                    <div className="bg-black flex items-center justify-center px-6 shrink-0">
+                      <span className={`${anton.className} uppercase text-white text-base sm:text-lg whitespace-nowrap`}>
+                        Global Hoops International Showcase
                       </span>
                     </div>
                   </div>
@@ -136,8 +138,8 @@ export default async function GameDetailPage({ params }: Props) {
           </div>
 
           {/* Right panel */}
-          <div className="hidden sm:flex border-l-2 border-dashed border-black/15 flex-col items-center justify-center py-7 px-7 min-w-[180px] bg-offwhite">
-            <Image src="/smart-nbtc-por.png" alt="NBTC x Smart" width={140} height={140} className="object-contain" />
+          <div className="hidden sm:block relative border-l-2 border-dashed border-black/15 min-w-[220px] bg-black">
+            <Image src="/smart-gh.jpg" alt="Smart x Global Hoops" fill className="object-cover" />
           </div>
 
         </div>
@@ -145,18 +147,6 @@ export default async function GameDetailPage({ params }: Props) {
 
       {/* ── Main content ── */}
       <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-1.5 text-xs text-offblack/40 mb-6">
-          <Link href="/" className="hover:text-primary transition-colors">
-            Upcoming Games 
-          </Link>
-          <span>/</span>
-          <span className="text-offblack/70 font-medium">
-            {game.description}
-          </span>
-
-        </nav>
-
         <TicketPurchasePanel game={game} />
       </div>
     </div>

@@ -1,7 +1,7 @@
 {
-  "name": "NBTC Tickets",
-  "short_name": "NBTC",
-  "description": "NBTC Basketball Ticketing",
+  "name": "Global Hoops Tickets",
+  "short_name": "GH Tickets",
+  "description": "Smart Global Hoops International Showcase Ticketing",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -9,14 +9,14 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/nbtc-logo.jpg",
+      "src": "/favico.png",
       "sizes": "192x192",
-      "type": "image/jpeg"
+      "type": "image/png"
     },
     {
-      "src": "/nbtc-logo.jpg",
+      "src": "/favico.png",
       "sizes": "512x512",
-      "type": "image/jpeg"
+      "type": "image/png"
     }
   ],
   "shortcuts": [

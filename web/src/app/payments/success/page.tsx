@@ -166,8 +166,8 @@ function SuccessContent() {
             {/* ── Logo area ── */}
             <div className="flex flex-col items-center pt-10 pb-6 px-8 border-b border-dashed border-gray-200">
               <Image
-                src="/nbtc-logo.jpg"
-                alt="NBTC Logo"
+                src="/favico.png"
+                alt="Global Hoops Logo"
                 width={90}
                 height={90}
                 className="object-contain mb-6"

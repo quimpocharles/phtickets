@@ -1,43 +1,44 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tickets.nbtc.com';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tickets.globalhoops.com';
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
 
   title: {
-    default: 'NBTC Tickets — Official Ticket Store',
-    template: '%s | NBTC Tickets',
+    default: 'Global Hoops Tickets — Official Ticket Store',
+    template: '%s | Global Hoops Tickets',
   },
   description:
-    'Buy official NBTC National Finals tickets online. No log-in needed. ' +
+    'Buy official Smart Global Hoops International Showcase tickets online. No log-in needed. ' +
     'Secure checkout powered by Maya. Visa, Mastercard, JCB, Amex & QR Ph accepted.',
   keywords: [
-    'NBTC', 'NBTC tickets', 'NBTC National Finals', 'basketball tickets',
-    'buy basketball tickets Philippines', 'Smart NBTC', 'online ticketing',
+    'Global Hoops', 'Global Hoops tickets', 'Global Hoops International Showcase',
+    'Smart Global Hoops', 'basketball tickets Philippines', 'online ticketing',
   ],
-  authors: [{ name: 'NBTC' }],
-  creator: 'NBTC',
-  publisher: 'NBTC',
+  authors: [{ name: 'Global Hoops International' }],
+  creator: 'Global Hoops International',
+  publisher: 'Global Hoops International',
 
   // ── Open Graph ─────────────────────────────────────────────────────────────
   openGraph: {
     type: 'website',
     locale: 'en_PH',
     url: APP_URL,
-    siteName: 'NBTC Tickets',
-    title: 'NBTC Tickets — Official Ticket Store',
+    siteName: 'Global Hoops Tickets',
+    title: 'Global Hoops Tickets — Official Ticket Store',
     description:
-      'Buy official NBTC National Finals tickets online. No log-in needed. ' +
+      'Buy official Smart Global Hoops International Showcase tickets online. No log-in needed. ' +
       'Secure checkout powered by Maya.',
     images: [
       {
-        url: '/nbtc-smart.png',
+        url: '/smart-gh.jpg',
         width: 1200,
         height: 630,
-        alt: 'NBTC x Smart — Official Ticket Store',
+        alt: 'Smart x Global Hoops International Showcase — Official Ticket Store',
       },
     ],
   },
@@ -45,15 +46,15 @@ export const metadata: Metadata = {
   // ── Twitter / X ────────────────────────────────────────────────────────────
   twitter: {
     card: 'summary_large_image',
-    title: 'NBTC Tickets — Official Ticket Store',
-    description: 'Buy official NBTC National Finals tickets online. No log-in needed.',
-    images: ['/nbtc-smart.png'],
+    title: 'Global Hoops Tickets — Official Ticket Store',
+    description: 'Buy official Smart Global Hoops International Showcase tickets online. No log-in needed.',
+    images: ['/smart-gh.jpg'],
   },
 
   // ── Icons ──────────────────────────────────────────────────────────────────
   icons: {
-    icon: '/nbtc-logo.jpg',
-    apple: '/nbtc-logo.jpg',
+    icon: '/favico.png',
+    apple: '/favico.png',
   },
 
   // ── PWA manifest ───────────────────────────────────────────────────────────
@@ -61,7 +62,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'NBTC Tickets',
+    title: 'Global Hoops Tickets',
   },
 
   // ── Robots ─────────────────────────────────────────────────────────────────
@@ -75,9 +76,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
+      <body className="overflow-x-hidden">
         <Navbar />
         <main className="min-h-screen">{children}</main>
+        <Footer />
       </body>
     </html>
   );

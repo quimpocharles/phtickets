@@ -1,4 +1,4 @@
-const SENDER = 'NBTC Ticketing System <puso-support@codeatcoffee.com>';
+const SENDER = 'Global Hoops Ticketing System <puso-support@codeatcoffee.com>';
 
 // ── Plain-text renderer ───────────────────────────────────────────────────────
 
@@ -35,7 +35,7 @@ function eodReportText(report) {
 
   return [
     divider('='),
-    'NBTC TICKETING SYSTEM — END OF DAY REPORT',
+    'GLOBAL HOOPS TICKETING SYSTEM — END OF DAY REPORT',
     divider('='),
     '',
     `Date: ${date}`,
@@ -75,7 +75,7 @@ function eodReportText(report) {
 function eodReportTemplate(report) {
   const { date, totalRevenue, totalTicketsSold, totalTransactions, byGame, byTicketType } = report;
 
-  const subject = `NBTC Ticketing System - End of Day Report | ${date}`;
+  const subject = `Global Hoops Ticketing System - End of Day Report | ${date}`;
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -137,7 +137,7 @@ function eodReportTemplate(report) {
                 <tr>
                   <td>
                     <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.6);">
-                      NBTC Ticketing System
+                      Global Hoops Ticketing System
                     </p>
                     <h1 style="margin:6px 0 0;font-size:22px;font-weight:900;color:#ffffff;line-height:1.2;">
                       End of Day Report
@@ -265,7 +265,7 @@ function eodReportTemplate(report) {
                       <strong style="color:#888888;">11:59 PM Philippine Standard Time</strong>.
                     </p>
                     <p style="margin:6px 0 0;font-size:12px;color:#bbbbbb;">
-                      NBTC Ticketing System &nbsp;·&nbsp; puso-support@codeatcoffee.com
+                      Global Hoops Ticketing System &nbsp;·&nbsp; puso-support@codeatcoffee.com
                     </p>
                   </td>
                 </tr>

@@ -36,7 +36,7 @@ async function sendTicketEmail({ to, buyerName, orderNumber, totalAmount, ticket
           <tr>
             <td style="padding:32px 28px 24px;">
               <!-- Logo placeholder -->
-              <p style="margin:0 0 20px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">NBTC 2026</p>
+              <p style="margin:0 0 20px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Global Hoops 2026</p>
 
               <!-- Event name -->
               <p style="margin:0 0 20px;font-size:20px;font-weight:800;color:#111827;line-height:1.3;">${game.description}</p>
@@ -148,15 +148,15 @@ async function sendTicketEmail({ to, buyerName, orderNumber, totalAmount, ticket
 </html>`;
 
   const from = process.env.EMAIL_FROM
-    ? `NBTC Tickets <${process.env.EMAIL_FROM}>`
-    : `NBTC Tickets <${process.env.SMTP_USER}>`;
+    ? `Global Hoops Tickets <${process.env.EMAIL_FROM}>`
+    : `Global Hoops Tickets <${process.env.SMTP_USER}>`;
 
   console.log('[mailer] Sending ticket email to:', to, '| from:', from);
 
   await transporter.sendMail({
     from,
     to,
-    subject: `Your NBTC Tickets – Order ${orderNumber}`,
+    subject: `Your Global Hoops Tickets – Order ${orderNumber}`,
     html,
   });
 

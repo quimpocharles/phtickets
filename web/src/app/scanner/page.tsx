@@ -179,7 +179,7 @@ export default function ScannerPage() {
       <div className="relative z-10 flex items-center justify-between px-4 pt-4 pb-2">
         <div>
           <p className="text-white font-bold text-sm leading-none">QR Scanner</p>
-          <p className="text-white/40 text-xs mt-0.5">NBTC Ticket Verification</p>
+          <p className="text-white/40 text-xs mt-0.5">Global Hoops Ticket Verification</p>
         </div>
         <button
           onClick={handleSignOut}
@@ -213,7 +213,7 @@ export default function ScannerPage() {
               type="text"
               value={manualId}
               onChange={(e) => setManualId(e.target.value.toUpperCase())}
-              placeholder="NBTC26-000001"
+              placeholder="GH26-000001"
               disabled={phase === 'verifying'}
               className="flex-1 bg-white/10 border border-white/15 rounded-xl px-4 py-3 text-white text-sm font-mono
                 placeholder:text-white/25 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/40

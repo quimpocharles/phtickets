@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Legal — Terms & Privacy',
-  description: 'Terms and Conditions and Privacy Policy for the NBTC official ticketing system.',
+  description: 'Terms and Conditions and Privacy Policy for the Global Hoops International Showcase official ticketing system.',
   robots: { index: false, follow: false },
 };
 
@@ -34,9 +34,9 @@ export default function LegalPage() {
           <div>
             <h3 className="font-bold text-offblack mb-2">1. General</h3>
             <p>
-              These Terms &amp; Conditions govern the purchase of tickets through the NBTC official ticketing
+              These Terms &amp; Conditions govern the purchase of tickets through the Global Hoops International Showcase official ticketing
               website (<strong>phtickets.vercel.app</strong> or any associated domain). By completing a purchase
-              you agree to these terms in full. The National Basketball Training Center (&ldquo;NBTC&rdquo;)
+              you agree to these terms in full. Global Hoops International (&ldquo;Global Hoops&rdquo;)
               reserves the right to update these terms at any time without prior notice.
             </p>
           </div>
@@ -48,7 +48,7 @@ export default function LegalPage() {
               <li>Prices are quoted and charged in Philippine Peso (PHP).</li>
               <li>A ticket is issued only after payment is confirmed by Maya.</li>
               <li>QR codes will be sent to the email address provided at checkout. Keep them safe — they act as your entry pass.</li>
-              <li>NBTC is not liable for tickets lost, forwarded, or shared with unauthorized third parties.</li>
+              <li>Global Hoops is not liable for tickets lost, forwarded, or shared with unauthorized third parties.</li>
             </ul>
           </div>
 
@@ -56,7 +56,7 @@ export default function LegalPage() {
             <h3 className="font-bold text-offblack mb-2">3. No Refund Policy</h3>
             <p>
               All ticket sales are <strong>final and non-refundable</strong>. No exchanges or cancellations
-              are accepted after payment is processed, except in the event that NBTC cancels or
+              are accepted after payment is processed, except in the event that Global Hoops cancels or
               postpones the event (see Section 5).
             </p>
           </div>
@@ -65,7 +65,7 @@ export default function LegalPage() {
             <h3 className="font-bold text-offblack mb-2">4. Prohibited Resale</h3>
             <p>
               Tickets may not be resold, transferred for profit, or listed on any secondary ticketing
-              marketplace. NBTC reserves the right to void tickets obtained through unauthorized channels
+              marketplace. Global Hoops reserves the right to void tickets obtained through unauthorized channels
               without compensation.
             </p>
           </div>
@@ -73,8 +73,8 @@ export default function LegalPage() {
           <div>
             <h3 className="font-bold text-offblack mb-2">5. Event Cancellation or Postponement</h3>
             <p>
-              If an event is cancelled by NBTC, ticket holders will be notified via email and a refund
-              or credit will be issued at NBTC&rsquo;s discretion. NBTC is not responsible for any
+              If an event is cancelled by Global Hoops, ticket holders will be notified via email and a refund
+              or credit will be issued at Global Hoops&rsquo;s discretion. Global Hoops is not responsible for any
               incidental costs (travel, accommodation, etc.) incurred by ticket holders.
             </p>
           </div>
@@ -84,15 +84,15 @@ export default function LegalPage() {
             <ul className="list-disc pl-5 flex flex-col gap-1.5">
               <li>A valid government-issued ID matching the buyer name (if provided) may be required at entry.</li>
               <li>Each QR code is valid for a single scan. Duplicated or screenshot QR codes may be denied entry.</li>
-              <li>NBTC and venue management reserve the right to refuse entry to anyone who violates venue policies.</li>
+              <li>Global Hoops and venue management reserve the right to refuse entry to anyone who violates venue policies.</li>
             </ul>
           </div>
 
           <div>
             <h3 className="font-bold text-offblack mb-2">7. Limitation of Liability</h3>
             <p>
-              NBTC&rsquo;s total liability arising from ticket purchases shall not exceed the face value of
-              the ticket(s) purchased. NBTC is not liable for any indirect or consequential damages.
+              Global Hoops&rsquo;s total liability arising from ticket purchases shall not exceed the face value of
+              the ticket(s) purchased. Global Hoops is not liable for any indirect or consequential damages.
             </p>
           </div>
 
@@ -114,7 +114,7 @@ export default function LegalPage() {
               <li><strong>Name</strong> — optional, used to personalise your ticket.</li>
               <li><strong>Email address</strong> — required to deliver your QR-coded ticket(s).</li>
               <li><strong>Mobile number</strong> — required for SMS ticket delivery.</li>
-              <li><strong>Payment information</strong> — handled entirely by Maya; NBTC does not store card details.</li>
+              <li><strong>Payment information</strong> — handled entirely by Maya; Global Hoops does not store card details.</li>
             </ul>
           </div>
 
@@ -124,7 +124,7 @@ export default function LegalPage() {
               <li>To generate and deliver your tickets via email and SMS.</li>
               <li>To verify identity at the venue gate if required.</li>
               <li>To contact you about event changes or cancellations.</li>
-              <li>To generate anonymised attendance reports for NBTC operations.</li>
+              <li>To generate anonymised attendance reports for Global Hoops operations.</li>
             </ul>
           </div>
 
@@ -138,7 +138,7 @@ export default function LegalPage() {
               <li><strong>MongoDB Atlas</strong> — secure cloud database hosted in the Asia-Pacific region.</li>
             </ul>
             <p className="mt-2">
-              Each provider has its own privacy policy and data processing terms. NBTC does not sell
+              Each provider has its own privacy policy and data processing terms. Global Hoops does not sell
               your personal data to any third party.
             </p>
           </div>
