@@ -7,6 +7,7 @@ const orderSchema = new mongoose.Schema({
   buyerEmail: { type: String, required: true },
   buyerPhone: { type: String, required: true },
   buyerName: { type: String, default: null },
+  country:   { type: String, default: null },
   quantity: { type: Number, required: true },
   totalAmount: { type: Number, required: true },
   paymentStatus: {

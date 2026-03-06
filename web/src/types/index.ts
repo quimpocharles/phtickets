@@ -34,6 +34,7 @@ export interface PurchasePayload {
   buyerEmail: string;
   buyerPhone: string;
   buyerName?: string;
+  country?: string;
 }
 
 export interface PurchaseResponse {

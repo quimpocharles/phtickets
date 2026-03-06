@@ -15,6 +15,7 @@ interface FormState {
   email: string;
   phone: string;
   name: string;
+  country: string;
 }
 
 interface Reservation {
@@ -22,7 +23,20 @@ interface Reservation {
   expiresAt: string;
 }
 
-const EMPTY_FORM: FormState = { email: '', phone: '', name: '' };
+const COUNTRIES = [
+  { code: 'PH', label: 'Philippines',      flag: '🇵🇭' },
+  { code: 'US', label: 'United States',    flag: '🇺🇸' },
+  { code: 'AU', label: 'Australia',        flag: '🇦🇺' },
+  { code: 'CA', label: 'Canada',           flag: '🇨🇦' },
+  { code: 'NZ', label: 'New Zealand',      flag: '🇳🇿' },
+  { code: 'IT', label: 'Italy',            flag: '🇮🇹' },
+  { code: 'EU', label: 'European Union',   flag: '🇪🇺' },
+  { code: 'GB', label: 'United Kingdom',   flag: '🇬🇧' },
+  { code: 'AE', label: 'United Arab Emirates', flag: '🇦🇪' },
+  { code: 'JP', label: 'Japan',            flag: '🇯🇵' },
+] as const;
+
+const EMPTY_FORM: FormState = { email: '', phone: '', name: '', country: '' };
 
 export default function TicketPurchasePanel({ game }: Props) {
   const router = useRouter();
@@ -92,6 +106,9 @@ export default function TicketPurchasePanel({ game }: Props) {
     } else if (!/^(09|\+639)\d{9}$/.test(form.phone.trim())) {
       next.phone = 'Enter a valid PH number (e.g. 09171234567).';
     }
+    if (!form.country) {
+      next.country = 'Please select your country.';
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -110,6 +127,7 @@ export default function TicketPurchasePanel({ game }: Props) {
         buyerEmail: form.email.trim(),
         buyerPhone: form.phone.trim(),
         buyerName: form.name.trim() || undefined,
+        country: form.country || undefined,
       });
       // Show countdown instead of immediately redirecting
       setReservation({ checkoutUrl: res.data.checkoutUrl, expiresAt: res.data.expiresAt });
@@ -155,6 +173,12 @@ export default function TicketPurchasePanel({ game }: Props) {
             <p className="text-white/70 text-sm">
               {selectedType.name} · {quantity} ticket{quantity > 1 ? 's' : ''}
             </p>
+            {form.country && (() => {
+              const c = COUNTRIES.find((x) => x.code === form.country);
+              return c ? (
+                <p className="text-white/50 text-xs mt-0.5">{c.flag} {c.label}</p>
+              ) : null;
+            })()}
           </div>
 
           <div className="px-5 py-6 flex flex-col items-center gap-5">
@@ -250,6 +274,36 @@ export default function TicketPurchasePanel({ game }: Props) {
 
             <Field label="Name" type="text" placeholder="Juan dela Cruz"
               value={form.name} onChange={(v) => setForm((f) => ({ ...f, name: v }))} optional />
+
+            {/* Country selector */}
+            <div>
+              <label className="text-xs font-semibold text-offblack/70 uppercase tracking-wide">
+                Country <span className="text-danger">*</span>
+              </label>
+              <p className="text-xs text-offblack/40 mt-0.5 mb-1.5">
+                Which country are you representing / supporting?
+              </p>
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                {COUNTRIES.map((c) => (
+                  <button
+                    key={c.code}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, country: c.code }))}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 text-left transition-all
+                      ${form.country === c.code
+                        ? 'border-offblack bg-offblack text-white'
+                        : 'border-black/10 bg-white hover:border-offblack/30 text-offblack'
+                      }`}
+                  >
+                    <span className="text-xl leading-none">{c.flag}</span>
+                    <span className="text-xs font-semibold leading-tight">{c.label}</span>
+                  </button>
+                ))}
+              </div>
+              {errors.country && (
+                <p className="text-xs text-danger mt-1.5">{errors.country}</p>
+              )}
+            </div>
 
             {apiError && (
               <p className="text-sm text-danger font-medium bg-danger/5 rounded-lg px-3 py-2">{apiError}</p>

@@ -15,6 +15,7 @@ const ticketReservationSchema = new mongoose.Schema({
   buyerEmail:  { type: String, required: true },
   buyerPhone:  { type: String, required: true },
   buyerName:   { type: String, default: null },
+  country:     { type: String, default: null },
   status: {
     type: String,
     enum: ['reserved', 'completed', 'expired'],

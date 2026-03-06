@@ -32,7 +32,7 @@ const { generateOrderNumber } = require('../utils/orderNumber');
 //   is created inside the same transaction to keep reservedCount in sync.
 // ─────────────────────────────────────────────────────────────────────────────
 router.post('/reserve', async (req, res) => {
-  const { ticketTypeId, quantity, buyerEmail, buyerPhone, buyerName } = req.body;
+  const { ticketTypeId, quantity, buyerEmail, buyerPhone, buyerName, country } = req.body;
 
   // ── Input validation ──────────────────────────────────────────────────────
   if (!ticketTypeId || !buyerEmail || !buyerPhone) {
@@ -87,6 +87,7 @@ router.post('/reserve', async (req, res) => {
           buyerEmail,
           buyerPhone,
           buyerName:   buyerName || null,
+          country:     country || null,
           status:      'reserved',
           expiresAt,
         },
@@ -130,7 +131,7 @@ router.post('/reserve', async (req, res) => {
 // ticketType.sold is incremented ONLY in the webhook on PAYMENT_SUCCESS.
 // ─────────────────────────────────────────────────────────────────────────────
 router.post('/purchase', async (req, res) => {
-  const { ticketTypeId, quantity, buyerEmail, buyerPhone, buyerName } = req.body;
+  const { ticketTypeId, quantity, buyerEmail, buyerPhone, buyerName, country } = req.body;
 
   // ── Input validation ──────────────────────────────────────────────────────
   if (!ticketTypeId || !buyerEmail || !buyerPhone) {
@@ -183,6 +184,7 @@ router.post('/purchase', async (req, res) => {
           buyerEmail,
           buyerPhone,
           buyerName:   buyerName || null,
+          country:     country || null,
           status:      'reserved',
           expiresAt,
         },
