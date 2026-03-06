@@ -393,6 +393,9 @@ router.post('/games/:gameId/tickets', async (req, res) => {
     if (t.ticketsPerPurchase != null && (!Number.isInteger(Number(t.ticketsPerPurchase)) || Number(t.ticketsPerPurchase) < 1)) {
       return res.status(400).json({ success: false, message: 'ticketsPerPurchase must be a positive integer.' });
     }
+    if (t.serviceFee != null && Number(t.serviceFee) < 0) {
+      return res.status(400).json({ success: false, message: 'serviceFee must be 0 or greater.' });
+    }
   }
 
   try {
@@ -409,10 +412,27 @@ router.post('/games/:gameId/tickets', async (req, res) => {
         quantity:           Number(t.quantity),
         scope:              t.scope              ?? 'day',
         ticketsPerPurchase: Number(t.ticketsPerPurchase ?? 1),
+        serviceFee:         Number(t.serviceFee ?? 0),
       }))
     );
 
     return res.status(201).json({ success: true, data: ticketTypes });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /admin/games/:gameId/tickets
+// All ticket types for a game, including inactive ones (admin view).
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/games/:gameId/tickets', async (req, res) => {
+  const { gameId } = req.params;
+  try {
+    const game = await Game.findById(gameId);
+    if (!game) return res.status(404).json({ success: false, message: 'Game not found.' });
+    const ticketTypes = await TicketType.find({ gameId });
+    return res.json({ success: true, data: { ...game.toObject(), ticketTypes } });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
@@ -431,7 +451,7 @@ router.post('/games/:gameId/tickets', async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 router.patch('/games/:gameId/tickets/:ticketTypeId', async (req, res) => {
   const { gameId, ticketTypeId } = req.params;
-  const { __v, name, price, quantity, scope, ticketsPerPurchase } = req.body;
+  const { __v, name, price, quantity, scope, ticketsPerPurchase, serviceFee } = req.body;
 
   if (__v === undefined || __v === null) {
     return res.status(400).json({
@@ -472,6 +492,12 @@ router.patch('/games/:gameId/tickets/:ticketTypeId', async (req, res) => {
       return res.status(400).json({ success: false, message: 'ticketsPerPurchase must be a positive integer.' });
     }
     updates.ticketsPerPurchase = Number(ticketsPerPurchase);
+  }
+  if (serviceFee !== undefined) {
+    if (Number(serviceFee) < 0) {
+      return res.status(400).json({ success: false, message: 'serviceFee must be 0 or greater.' });
+    }
+    updates.serviceFee = Number(serviceFee);
   }
 
   if (Object.keys(updates).length === 0) {
@@ -515,6 +541,35 @@ router.patch('/games/:gameId/tickets/:ticketTypeId', async (req, res) => {
     }
 
     return res.json({ success: true, data: updated });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE /admin/games/:gameId/tickets/:ticketTypeId
+// super_admin → hard delete (only if sold === 0)
+// admin       → soft delete (sets active: false; allowed even if sold > 0)
+// ─────────────────────────────────────────────────────────────────────────────
+router.delete('/games/:gameId/tickets/:ticketTypeId', async (req, res) => {
+  const { gameId, ticketTypeId } = req.params;
+  const isSuperAdmin = req.admin.role === 'super_admin';
+  try {
+    const tt = await TicketType.findOne({ _id: ticketTypeId, gameId });
+    if (!tt) {
+      return res.status(404).json({ success: false, message: 'Ticket type not found.' });
+    }
+
+    if (isSuperAdmin && tt.sold === 0) {
+      // Hard delete: super_admin only, and only when no tickets sold
+      await tt.deleteOne();
+      return res.json({ success: true, deleted: 'hard' });
+    } else {
+      // Soft delete: anyone can deactivate regardless of sold count
+      tt.active = false;
+      await tt.save();
+      return res.json({ success: true, deleted: 'soft' });
+    }
   } catch (err) {
     return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }

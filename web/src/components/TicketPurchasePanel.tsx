@@ -41,22 +41,23 @@ const EMPTY_FORM: FormState = { email: '', phone: '', name: '', country: '' };
 export default function TicketPurchasePanel({ game }: Props) {
   const router = useRouter();
 
-  const [selectedType, setSelectedType] = useState<TicketType | null>(null);
-  const [quantity, setQuantity] = useState(1);
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [errors, setErrors] = useState<Partial<FormState>>({});
-  const [loading, setLoading] = useState(false);
+  // cart: ticketTypeId → { type, quantity }
+  const [cart, setCart]         = useState<Map<string, { type: TicketType; quantity: number }>>(new Map());
+  const [form, setForm]         = useState<FormState>(EMPTY_FORM);
+  const [errors, setErrors]     = useState<Partial<FormState>>({});
+  const [loading, setLoading]   = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [reservation, setReservation] = useState<Reservation | null>(null);
-  const [timeLeft, setTimeLeft] = useState(0); // seconds
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [drawerOpen, setDrawerOpen]   = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
-  const remaining = selectedType ? selectedType.available : 0;
-  const maxQty = Math.min(remaining, 25);
-  const total = selectedType ? selectedType.price * quantity : 0;
-  const overLimit = quantity > remaining;
-  const expired = reservation !== null && timeLeft === 0;
+  const cartItems       = Array.from(cart.values());
+  const cartCount       = cartItems.reduce((s, { quantity }) => s + quantity, 0);
+  const ticketsSubtotal = cartItems.reduce((s, { type, quantity }) => s + type.price * quantity, 0);
+  const totalServiceFee = cartItems.reduce((s, { type, quantity }) => s + (type.serviceFee ?? 0) * quantity, 0);
+  const grandTotal      = ticketsSubtotal + totalServiceFee;
+  const expired    = reservation !== null && timeLeft === 0;
 
   // ── Countdown timer ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -80,18 +81,32 @@ export default function TicketPurchasePanel({ game }: Props) {
     return () => clearInterval(id);
   }, [reservation, router]);
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  function selectType(tt: TicketType) {
-    setSelectedType(tt);
-    setQuantity(1);
+  // ── Cart helpers ──────────────────────────────────────────────────────────
+  function addToCart(tt: TicketType) {
+    setCart((prev) => {
+      const next     = new Map(prev);
+      const existing = next.get(tt._id);
+      const maxQty   = Math.min(tt.available, 25);
+      next.set(tt._id, { type: tt, quantity: existing ? Math.min(existing.quantity + 1, maxQty) : 1 });
+      return next;
+    });
     setApiError(null);
     setErrors({});
-    setReservation(null);
-    setAgreedToTerms(false);
   }
 
-  function changeQty(delta: number) {
-    setQuantity((q) => Math.min(maxQty, Math.max(1, q + delta)));
+  function changeCartQty(ttId: string, qty: number) {
+    if (qty <= 0) {
+      setCart((prev) => { const next = new Map(prev); next.delete(ttId); return next; });
+    } else {
+      setCart((prev) => {
+        const next     = new Map(prev);
+        const existing = next.get(ttId);
+        if (existing) {
+          next.set(ttId, { type: existing.type, quantity: Math.min(qty, Math.min(existing.type.available, 25)) });
+        }
+        return next;
+      });
+    }
   }
 
   function validate(): boolean {
@@ -118,21 +133,19 @@ export default function TicketPurchasePanel({ game }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedType || !validate()) return;
+    if (cartItems.length === 0 || !validate()) return;
 
     setLoading(true);
     setApiError(null);
 
     try {
       const res = await purchaseTickets({
-        ticketTypeId: selectedType._id,
-        quantity,
+        items: cartItems.map(({ type, quantity }) => ({ ticketTypeId: type._id, quantity })),
         buyerEmail: form.email.trim(),
         buyerPhone: form.phone.trim(),
-        buyerName: form.name.trim() || undefined,
-        country: form.country || undefined,
+        buyerName:  form.name.trim() || undefined,
+        country:    form.country    || undefined,
       });
-      // Show countdown instead of immediately redirecting
       setReservation({ checkoutUrl: res.data.checkoutUrl, expiresAt: res.data.expiresAt });
     } catch (err) {
       setApiError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
@@ -149,8 +162,8 @@ export default function TicketPurchasePanel({ game }: Props) {
   const orderPanel = (
     <div className="md:sticky md:top-6">
 
-      {/* ── No ticket selected ── */}
-      {!selectedType && (
+      {/* ── Empty cart ── */}
+      {cartItems.length === 0 && (
         <div className="rounded-2xl border-2 border-dashed border-black/15 p-8 flex flex-col items-center justify-center text-center gap-2 min-h-[220px]">
           <div className="w-10 h-10 rounded-full bg-black/8 flex items-center justify-center mb-1">
             <svg className="w-5 h-5 text-offblack/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -158,13 +171,13 @@ export default function TicketPurchasePanel({ game }: Props) {
                 d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
             </svg>
           </div>
-          <p className="text-sm font-semibold text-offblack/50">Select a ticket type</p>
-          <p className="text-xs text-offblack/30">to continue with checkout</p>
+          <p className="text-sm font-semibold text-offblack/50">No tickets selected</p>
+          <p className="text-xs text-offblack/30">Tap a ticket type to add to cart</p>
         </div>
       )}
 
       {/* ── Reservation countdown ── */}
-      {selectedType && reservation && (
+      {cartItems.length > 0 && reservation && (
         <div className="rounded-2xl bg-white border border-black/8 shadow-sm overflow-hidden animate-fade-in-up">
           <div className="px-5 py-4 bg-offblack">
             <p className="text-xs font-bold uppercase tracking-widest text-white/60 mb-0.5">
@@ -173,9 +186,11 @@ export default function TicketPurchasePanel({ game }: Props) {
             <p className="text-white font-black text-lg leading-tight">
               {expired ? 'Your hold has ended' : 'Tickets reserved for you'}
             </p>
-            <p className="text-white/70 text-sm">
-              {selectedType.name} · {quantity} ticket{quantity > 1 ? 's' : ''}
-            </p>
+            {cartItems.map(({ type, quantity }) => (
+              <p key={type._id} className="text-white/70 text-sm">
+                {type.name} · {quantity} ticket{quantity > 1 ? 's' : ''}
+              </p>
+            ))}
             {form.country && (() => {
               const c = COUNTRIES.find((x) => x.code === form.country);
               return c ? (
@@ -193,7 +208,7 @@ export default function TicketPurchasePanel({ game }: Props) {
                 </div>
                 <button
                   type="button"
-                  onClick={() => { setReservation(null); setSelectedType(null); setDrawerOpen(false); }}
+                  onClick={() => { setReservation(null); setCart(new Map()); setDrawerOpen(false); }}
                   className="w-full bg-offblack hover:bg-black text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98]"
                 >
                   Choose Tickets Again
@@ -211,9 +226,23 @@ export default function TicketPurchasePanel({ game }: Props) {
                   <p className="text-xs text-offblack/40">minutes · seconds</p>
                 </div>
 
-                <div className="w-full border-t border-black/8 pt-4 flex items-baseline justify-between">
-                  <span className="text-sm text-offblack/60">₱{selectedType.price.toLocaleString()} × {quantity}</span>
-                  <span className="text-2xl font-black text-offblack">₱{total.toLocaleString()}</span>
+                <div className="w-full border-t border-black/8 pt-4 space-y-1">
+                  {cartItems.map(({ type, quantity }) => (
+                    <div key={type._id} className="flex items-baseline justify-between">
+                      <span className="text-sm text-offblack/60">{type.name} × {quantity}</span>
+                      <span className="text-sm font-bold text-offblack">₱{(type.price * quantity).toLocaleString()}</span>
+                    </div>
+                  ))}
+                  {totalServiceFee > 0 && (
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-sm text-offblack/50">Web service fee</span>
+                      <span className="text-sm text-offblack/60">₱{totalServiceFee.toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex items-baseline justify-between border-t border-black/8 pt-2 mt-1">
+                    <span className="text-sm font-semibold text-offblack/60">Total</span>
+                    <span className="text-2xl font-black text-offblack">₱{grandTotal.toLocaleString()}</span>
+                  </div>
                 </div>
 
                 <a
@@ -224,13 +253,13 @@ export default function TicketPurchasePanel({ game }: Props) {
                 </a>
 
                 <div className="text-center space-y-1">
-              <p className="text-xs text-offblack/30">Powered by Maya · Secure checkout</p>
-              <p className="text-xs text-offblack/40">Visa · Mastercard · JCB · Amex · QR Ph accepted</p>
-              <p className="text-xs text-offblack/30">
-                By proceeding you agree to our{' '}
-                <a href="/legal" className="underline hover:text-primary transition-colors">Terms &amp; Privacy</a>
-              </p>
-            </div>
+                  <p className="text-xs text-offblack/30">Powered by Maya · Secure checkout</p>
+                  <p className="text-xs text-offblack/40">Visa · Mastercard · JCB · Amex · QR Ph accepted</p>
+                  <p className="text-xs text-offblack/30">
+                    By proceeding you agree to our{' '}
+                    <a href="/legal" className="underline hover:text-primary transition-colors">Terms &amp; Privacy</a>
+                  </p>
+                </div>
               </>
             )}
           </div>
@@ -238,7 +267,7 @@ export default function TicketPurchasePanel({ game }: Props) {
       )}
 
       {/* ── Checkout form ── */}
-      {selectedType && !reservation && (
+      {cartItems.length > 0 && !reservation && (
         <form
           onSubmit={handleSubmit}
           noValidate
@@ -246,27 +275,36 @@ export default function TicketPurchasePanel({ game }: Props) {
         >
           <div className="bg-offblack px-5 py-4">
             <p className="text-xs font-bold uppercase tracking-widest text-white/60 mb-0.5">Order Summary</p>
-            <p className="text-white font-black text-lg leading-tight">{selectedType.name.toUpperCase()}</p>
-            <p className="text-white/70 text-sm">{game.description}</p>
+            {cartItems.map(({ type, quantity }) => (
+              <p key={type._id} className="text-white/70 text-sm">
+                {type.name} × {quantity}
+              </p>
+            ))}
           </div>
 
           <div className="px-5 py-5 flex flex-col gap-5">
-            {/* Quantity */}
-            <div>
-              <label className="field-label">Quantity</label>
-              <div className="flex items-center gap-3 mt-1.5">
-                <button type="button" onClick={() => changeQty(-1)} disabled={quantity <= 1} className="qty-btn">−</button>
-                <span className="text-xl font-black w-8 text-center tabular-nums">{quantity}</span>
-                <button type="button" onClick={() => changeQty(1)} disabled={quantity >= maxQty} className="qty-btn">+</button>
-                <span className="text-xs text-offblack/40 ml-1">max {maxQty}</span>
+            {/* Cart items breakdown */}
+            <div className="flex flex-col gap-1">
+              {cartItems.map(({ type, quantity }) => (
+                <div key={type._id} className="flex items-baseline justify-between">
+                  <span className="text-sm text-offblack/60">{type.name} × {quantity}</span>
+                  <span className="text-sm font-bold text-offblack">₱{(type.price * quantity).toLocaleString()}</span>
+                </div>
+              ))}
+              {totalServiceFee > 0 && (
+                <div className="flex items-baseline justify-between">
+                  <span className="text-sm text-offblack/50">Web service fee</span>
+                  <span className="text-sm text-offblack/60">₱{totalServiceFee.toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex items-baseline justify-between border-t border-black/8 pt-2 mt-1">
+                <span className="text-sm font-semibold text-offblack/60">Grand Total</span>
+                <span className="text-xl font-black text-offblack">₱{grandTotal.toLocaleString()}</span>
               </div>
             </div>
 
-            {/* Total */}
-            <div className="flex items-baseline justify-between border-y border-black/8 py-3">
-              <span className="text-sm text-offblack/60">₱{selectedType.price.toLocaleString()} × {quantity}</span>
-              <span className="text-2xl font-black text-offblack">₱{total.toLocaleString()}</span>
-            </div>
+            <Field label="Name" required type="text" placeholder="Juan dela Cruz"
+              value={form.name} onChange={(v) => setForm((f) => ({ ...f, name: v }))} error={errors.name} />
 
             <Field label="Email" required type="email" placeholder="you@example.com"
               value={form.email} onChange={(v) => setForm((f) => ({ ...f, email: v }))} error={errors.email} />
@@ -274,9 +312,6 @@ export default function TicketPurchasePanel({ game }: Props) {
             <Field label="Phone" required type="tel" placeholder="+1 555 123 4567 or 09171234567"
               value={form.phone} onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
               error={errors.phone} hint="Include country code for international numbers" />
-
-            <Field label="Name" required type="text" placeholder="Juan dela Cruz"
-              value={form.name} onChange={(v) => setForm((f) => ({ ...f, name: v }))} error={errors.name} />
 
             {/* Country selector */}
             <div>
@@ -330,7 +365,7 @@ export default function TicketPurchasePanel({ game }: Props) {
 
             <button
               type="submit"
-              disabled={loading || overLimit || !agreedToTerms}
+              disabled={loading || !agreedToTerms}
               className="w-full bg-offblack hover:bg-black disabled:opacity-60 disabled:cursor-not-allowed
                 text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2"
             >
@@ -408,8 +443,9 @@ export default function TicketPurchasePanel({ game }: Props) {
                 <TicketTypeCard
                   key={tt._id}
                   ticketType={tt}
-                  selected={selectedType?._id === tt._id}
-                  onClick={() => { selectType(tt); }}
+                  cartQty={cart.get(tt._id)?.quantity ?? 0}
+                  onAdd={() => addToCart(tt)}
+                  onChangeQty={(qty) => changeCartQty(tt._id, qty)}
                 />
               ))}
             </div>
@@ -432,9 +468,9 @@ export default function TicketPurchasePanel({ game }: Props) {
         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
-        {selectedType && (
+        {cartCount > 0 && (
           <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-accent text-[9px] font-black text-offblack flex items-center justify-center">
-            1
+            {cartCount}
           </span>
         )}
       </button>

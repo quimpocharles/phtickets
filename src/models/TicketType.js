@@ -17,6 +17,10 @@ const ticketTypeSchema = new mongoose.Schema({
   // Number of individual QR codes generated per purchase unit.
   // Set to 5 for family passes, 1 for individual passes.
   ticketsPerPurchase: { type: Number, default: 1, min: 1 },
+  // Web service fee charged per purchase unit (on top of ticket price), shouldered by buyer.
+  serviceFee: { type: Number, default: 0, min: 0 },
+  // Soft-delete flag. false = hidden from public listing but not removed from DB.
+  active: { type: Boolean, default: true },
 });
 
 ticketTypeSchema.index({ gameId: 1 });

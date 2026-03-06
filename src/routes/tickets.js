@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
@@ -116,104 +117,114 @@ router.post('/reserve', async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /tickets/purchase
 //
-// Single "buy tickets" action that combines the reservation + Maya checkout
-// into one request so the client never needs to call two endpoints.
+// Multi-item cart purchase. Accepts an array of { ticketTypeId, quantity } items.
+// A shared cartId (UUID) is generated and stored on all reservations, and is used
+// as Maya's requestReferenceNumber so the webhook can find all reservations.
 //
-// What happens here:
-//   1. Availability check  (quantity - sold - activeReservations)
-//   2. Create TicketReservation  (status=reserved, expiresAt=+5 min)
-//      ↳ ticketType.sold is NOT touched here
-//   3. Create Maya checkout using reservationId as requestReferenceNumber
-//   4. Extend reservation.expiresAt to +30 min + store checkoutId
-//      (so the TTL does not delete the document before Maya fires the webhook)
-//   5. Return { reservationId, expiresAt, checkoutId, checkoutUrl }
-//
-// ticketType.sold is incremented ONLY in the webhook on PAYMENT_SUCCESS.
+// Flow:
+//   1. Validate all items
+//   2. In one transaction: check availability for each item, create all reservations
+//   3. Create one Maya checkout for the combined total (cartId as reference)
+//   4. Extend all reservations' TTL + store checkoutId
+//   5. Return { cartId, expiresAt, checkoutId, checkoutUrl }
 // ─────────────────────────────────────────────────────────────────────────────
 router.post('/purchase', async (req, res) => {
-  const { ticketTypeId, quantity, buyerEmail, buyerPhone, buyerName, country } = req.body;
+  const { items, buyerEmail, buyerPhone, buyerName, country } = req.body;
 
   // ── Input validation ──────────────────────────────────────────────────────
-  if (!ticketTypeId || !buyerEmail || !buyerPhone) {
-    return res.status(400).json({
-      success: false,
-      message: 'ticketTypeId, buyerEmail, and buyerPhone are required.',
-    });
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ success: false, message: 'items must be a non-empty array.' });
+  }
+  if (!buyerEmail || !buyerPhone) {
+    return res.status(400).json({ success: false, message: 'buyerEmail and buyerPhone are required.' });
   }
 
-  const qty = parseInt(quantity, 10);
-  if (!Number.isInteger(qty) || qty < 1) {
-    return res.status(400).json({ success: false, message: 'quantity must be a positive integer.' });
+  const normalizedItems = [];
+  for (const item of items) {
+    const qty = parseInt(item.quantity, 10);
+    if (!item.ticketTypeId || !Number.isInteger(qty) || qty < 1) {
+      return res.status(400).json({ success: false, message: 'Each item needs a ticketTypeId and a positive quantity.' });
+    }
+    normalizedItems.push({ ticketTypeId: item.ticketTypeId, quantity: qty });
   }
 
-  // ── Phase 1: availability check + create reservation (transaction) ────────
-  // ticketType.sold stays unchanged here — seats are held by the reservation.
+  // cartId is the single reference tying all reservations + Maya checkout together
+  const cartId   = crypto.randomUUID();
+  const expiresAt = new Date(Date.now() + RESERVATION_TTL_SECONDS * 1000);
+
+  // ── Phase 1: availability check + create all reservations (transaction) ───
   const session = await mongoose.startSession();
   session.startTransaction();
 
-  let reservation;
+  let reservations;
+  let ticketTypeMap;
 
   try {
-    const ticketType = await TicketType.findById(ticketTypeId).session(session);
-    if (!ticketType) {
+    const ids         = normalizedItems.map((i) => i.ticketTypeId);
+    const ticketTypes = await TicketType.find({ _id: { $in: ids } }).session(session);
+
+    if (ticketTypes.length !== normalizedItems.length) {
       await session.abortTransaction();
-      return res.status(404).json({ success: false, message: 'Ticket type not found.' });
+      return res.status(404).json({ success: false, message: 'One or more ticket types not found.' });
     }
 
-    const activeReserved = await TicketReservation.countActiveReserved(ticketTypeId, session);
-    const available = ticketType.quantity - ticketType.sold - activeReserved;
+    ticketTypeMap = new Map(ticketTypes.map((tt) => [tt._id.toString(), tt]));
 
-    if (qty > available) {
-      await session.abortTransaction();
-      return res.status(409).json({
-        success: false,
-        message: available > 0
-          ? `Only ${available} ticket(s) available.`
-          : 'Tickets for this type are sold out.',
-      });
+    for (const item of normalizedItems) {
+      const tt            = ticketTypeMap.get(item.ticketTypeId);
+      const activeReserved = await TicketReservation.countActiveReserved(item.ticketTypeId, session);
+      const available     = tt.quantity - tt.sold - activeReserved;
+
+      if (item.quantity > available) {
+        await session.abortTransaction();
+        return res.status(409).json({
+          success: false,
+          message: available > 0
+            ? `Only ${available} ticket(s) available for ${tt.name}.`
+            : `${tt.name} is sold out.`,
+        });
+      }
     }
 
-    const expiresAt = new Date(Date.now() + RESERVATION_TTL_SECONDS * 1000);
+    const docs = normalizedItems.map((item) => {
+      const tt = ticketTypeMap.get(item.ticketTypeId);
+      return {
+        cartId,
+        gameId:      tt.gameId,
+        ticketTypeId: item.ticketTypeId,
+        quantity:    item.quantity,
+        buyerEmail,
+        buyerPhone,
+        buyerName:   buyerName || null,
+        country:     country  || null,
+        status:      'reserved',
+        expiresAt,
+      };
+    });
 
-    ;[reservation] = await TicketReservation.create(
-      [
-        {
-          gameId:      ticketType.gameId,
-          ticketTypeId,
-          quantity:    qty,
-          buyerEmail,
-          buyerPhone,
-          buyerName:   buyerName || null,
-          country:     country || null,
-          status:      'reserved',
-          expiresAt,
-        },
-      ],
-      { session }
-    );
-
+    reservations = await TicketReservation.create(docs, { session, ordered: true });
     await session.commitTransaction();
   } catch (err) {
     await session.abortTransaction();
+    console.error('[purchase] Phase 1 error:', err);
     return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   } finally {
     session.endSession();
   }
 
-  // ── Phase 2: create Maya checkout + anchor the reservation ────────────────
-  // Running outside the transaction so a Maya timeout does not roll back the
-  // reservation (which would silently un-hold the seats with no feedback).
+  // ── Phase 2: create Maya checkout + anchor all reservations ───────────────
   try {
-    const [game, ticketType] = await Promise.all([
-      Game.findById(reservation.gameId, 'description'),
-      TicketType.findById(reservation.ticketTypeId, 'name price'),
-    ]);
-
-    const totalAmount = ticketType.price * reservation.quantity;
-    const description = `${ticketType.name} – ${game.description}`;
+    const game        = await Game.findById(reservations[0].gameId, 'description');
+    const totalAmount = normalizedItems.reduce((sum, item) => {
+      const tt = ticketTypeMap.get(item.ticketTypeId);
+      return sum + (tt.price + (tt.serviceFee ?? 0)) * item.quantity;
+    }, 0);
+    const description = normalizedItems.length === 1
+      ? `${ticketTypeMap.get(normalizedItems[0].ticketTypeId).name} – ${game.description}`
+      : `${game.description} (${normalizedItems.length} ticket types)`;
 
     const checkout = await createCheckout({
-      referenceNumber: reservation._id.toString(), // echoed back in the webhook
+      referenceNumber: cartId,
       totalAmount,
       description,
       buyerEmail,
@@ -221,34 +232,85 @@ router.post('/purchase', async (req, res) => {
       buyerName,
     });
 
-    // Extend the TTL so MongoDB does not delete the reservation before the
-    // webhook fires, and store the checkoutId for cross-verification.
-    await TicketReservation.findByIdAndUpdate(reservation._id, {
-      checkoutId: checkout.checkoutId,
-      expiresAt:  new Date(Date.now() + CHECKOUT_WINDOW_SECONDS * 1000),
-    });
+    await TicketReservation.updateMany(
+      { cartId },
+      {
+        checkoutId: checkout.checkoutId,
+        expiresAt:  new Date(Date.now() + CHECKOUT_WINDOW_SECONDS * 1000),
+      }
+    );
 
     return res.status(201).json({
       success: true,
       data: {
-        reservationId: reservation._id,
-        expiresAt:     new Date(Date.now() + CHECKOUT_WINDOW_SECONDS * 1000),
-        checkoutId:    checkout.checkoutId,
-        checkoutUrl:   checkout.redirectUrl,
+        cartId,
+        expiresAt:   new Date(Date.now() + CHECKOUT_WINDOW_SECONDS * 1000),
+        checkoutId:  checkout.checkoutId,
+        checkoutUrl: checkout.redirectUrl,
       },
     });
   } catch (err) {
-    // Maya call failed — release the reservation immediately so the seats
-    // become available again without waiting for the 5-minute TTL.
-    await TicketReservation.findByIdAndUpdate(reservation._id, { status: 'expired' });
-
+    await TicketReservation.updateMany({ cartId }, { status: 'expired' });
     const mayaError = err.response?.data;
     console.error('[purchase] Maya checkout failed:', mayaError ?? err.message);
+    return res.status(502).json({ success: false, message: 'Could not initiate payment. Please try again.' });
+  }
+});
 
-    return res.status(502).json({
-      success: false,
-      message: 'Could not initiate payment. Please try again.',
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /tickets/order/cart/:cartId
+// Returns all orders + tickets for a cart (used by the success page).
+// Polls-friendly: returns 404 until all orders have been created by the webhook.
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/order/cart/:cartId', async (req, res) => {
+  try {
+    const reservations = await TicketReservation.find({ cartId: req.params.cartId });
+    if (!reservations.length) {
+      return res.status(404).json({ success: false, message: 'Not found.' });
+    }
+
+    const reservationIds = reservations.map((r) => r._id);
+    const orders = await Order.find({
+      reservationId: { $in: reservationIds },
+      paymentStatus: 'paid',
+    })
+      .populate('gameId',      'description venue gameDate eventEndDate')
+      .populate('ticketTypeId', 'name price scope');
+
+    if (!orders.length) {
+      return res.status(404).json({ success: false, message: 'Not found.' });
+    }
+
+    const orderIds   = orders.map((o) => o._id);
+    const allTickets = await Ticket.find({ orderId: { $in: orderIds } }).sort({ createdAt: 1 });
+
+    const ticketsByOrder = new Map();
+    for (const t of allTickets) {
+      const key = t.orderId.toString();
+      if (!ticketsByOrder.has(key)) ticketsByOrder.set(key, []);
+      ticketsByOrder.get(key).push(t);
+    }
+
+    const grandTotal = orders.reduce((sum, o) => sum + o.totalAmount, 0);
+
+    return res.json({
+      success: true,
+      data: {
+        game:       orders[0].gameId,
+        buyer:      { name: orders[0].buyerName, email: orders[0].buyerEmail },
+        grandTotal,
+        orders: orders.map((o) => ({
+          orderNumber:      o.orderNumber,
+          ticketTypeName:   o.ticketTypeId.name,
+          ticketTypeScope:  o.ticketTypeId.scope,
+          quantity:         o.quantity,
+          totalAmount:      o.totalAmount,
+          tickets:          ticketsByOrder.get(o._id.toString()) ?? [],
+        })),
+      },
     });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 

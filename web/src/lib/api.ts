@@ -1,4 +1,4 @@
-import type { Game, PurchasePayload, PurchaseResponse } from '@/types';
+import type { Game, PurchasePayload, PurchaseResponse, CartOrderResponse } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -23,4 +23,9 @@ export async function purchaseTickets(payload: PurchasePayload): Promise<Purchas
   const json: PurchaseResponse = await res.json();
   if (!res.ok) throw new Error(json.message ?? 'Purchase failed.');
   return json;
+}
+
+export async function getCartOrder(cartId: string): Promise<CartOrderResponse> {
+  const res = await fetch(`${API_URL}/tickets/order/cart/${cartId}`);
+  return res.json();
 }

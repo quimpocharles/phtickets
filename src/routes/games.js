@@ -40,7 +40,7 @@ router.get('/', async (req, res) => {
 
     // Load all ticket types for every game in one query (avoids N+1)
     const gameIds = games.map((g) => g._id);
-    const allTicketTypes = await TicketType.find({ gameId: { $in: gameIds } });
+    const allTicketTypes = await TicketType.find({ gameId: { $in: gameIds }, active: { $ne: false } });
 
     // Single aggregate: get active reservation totals for every ticket type at once
     const ticketTypeIds = allTicketTypes.map((t) => t._id);

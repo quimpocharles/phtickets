@@ -11,6 +11,8 @@ export interface TicketType {
   reserved: number;
   /** Server-computed: quantity - sold - reserved. Use this for all availability display. */
   available: number;
+  /** Web service fee per purchase unit charged on top of ticket price, shouldered by buyer. */
+  serviceFee: number;
   /** Server-computed urgency label based on quantity - sold ratio and sold count. */
   urgencyBadge: 'Trending' | 'Fast-Selling' | 'Almost Sold-Out' | 'Last Chance to Buy' | null;
   /** "Only N tickets left" when quantity - sold < 100, otherwise null. */
@@ -28,9 +30,13 @@ export interface Game {
   ticketTypes: TicketType[];
 }
 
-export interface PurchasePayload {
+export interface CartItem {
   ticketTypeId: string;
   quantity: number;
+}
+
+export interface PurchasePayload {
+  items: CartItem[];
   buyerEmail: string;
   buyerPhone: string;
   buyerName?: string;
@@ -40,10 +46,28 @@ export interface PurchasePayload {
 export interface PurchaseResponse {
   success: boolean;
   data: {
-    reservationId: string;
+    cartId: string;
     expiresAt: string;
     checkoutId: string;
     checkoutUrl: string;
+  };
+  message?: string;
+}
+
+export interface CartOrderResponse {
+  success: boolean;
+  data: {
+    game: { description: string; venue: string; gameDate: string; eventEndDate: string };
+    buyer: { name: string | null; email: string };
+    grandTotal: number;
+    orders: Array<{
+      orderNumber: string;
+      ticketTypeName: string;
+      ticketTypeScope: string;
+      quantity: number;
+      totalAmount: number;
+      tickets: Array<{ _id: string; ticketId: string; qrCodeUrl: string; status: string }>;
+    }>;
   };
   message?: string;
 }

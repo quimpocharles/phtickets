@@ -57,9 +57,16 @@ middleware/adminAuth.js  JWT verification for /admin routes
 
 ### Payment flow (critical path)
 
-1. **`POST /tickets/purchase`** — MongoDB transaction: availability check (quantity − sold − activeReservations) → create `TicketReservation` (status=reserved, TTL=5min) → call Maya `createCheckout` → extend TTL to 30min → return `checkoutUrl`.
-2. **`POST /payments/webhook`** — HMAC-SHA512 verify (`x-signature` header, skipped if `MAYA_WEBHOOK_SECRET` not set) → cross-verify with Maya API → atomic `findOneAndUpdate` to claim reservation → `Order.create` → `TicketType.sold += qty` → `generateTickets` → fire email + SMS (non-blocking).
-3. **`POST /payments/process/:reservationId`** — client-triggered fallback for local dev when webhooks can't reach localhost. Skips Maya API verification only when `NODE_ENV=development`. The success page polls `GET /tickets/order/:reservationId` every 5s; triggers `/process` after 3 failures.
+1. **`POST /tickets/purchase`** — accepts `{ items: [{ ticketTypeId, quantity }], buyerEmail, buyerPhone, buyerName, country }`. Generates a `cartId` (UUID), runs a MongoDB transaction to check availability and create all `TicketReservation` docs (shared `cartId`, TTL=5min), calls Maya `createCheckout` with `cartId` as `requestReferenceNumber`, extends TTL to 30min, returns `{ cartId, checkoutUrl }`.
+2. **`POST /payments/webhook`** — `requestReferenceNumber` = `cartId`. HMAC-SHA512 verify → cross-verify with Maya API → `TicketReservation.updateMany({ cartId })` to claim all → one `Order` per reservation → `TicketType.sold += qty` → `generateTickets` → one combined email + SMS (non-blocking).
+3. **`POST /payments/process/:cartId`** — client-triggered fallback for local dev when webhooks can't reach localhost. Skips Maya API verification only when `NODE_ENV=development`. Returns same shape as `GET /tickets/order/cart/:cartId`.
+4. **`GET /tickets/order/cart/:cartId`** — polled by the success page every 5s; returns `{ game, buyer, grandTotal, orders: [{ orderNumber, ticketTypeName, tickets }] }`. Triggers `/process` after 3 failed polls.
+
+### Multi-cart purchase
+
+A single checkout can contain multiple ticket types (e.g. 4× Single Day + 2× VIP). All reservations share one `cartId` stored on each `TicketReservation`. The Maya checkout total = sum of `(price + serviceFee) × quantity` across all items. On success, one `Order` is created per ticket type.
+
+**Mongoose 8 note:** `Model.create([...], { session, ordered: true })` — `ordered: true` is required when using a session with multiple documents.
 
 ### Availability race-condition guard
 
@@ -94,10 +101,18 @@ middleware/adminAuth.js  JWT verification for /admin routes
 |-------|---------|
 | `tickets/` | Public game listing + game detail + purchase panel |
 | `tickets/find/` | "Find My Tickets" — email + phone lookup |
-| `payments/success/` | Polls `GET /tickets/order/:reservationId`; shows ticket cards + QR |
+| `payments/success/` | Polls `GET /tickets/order/cart/:cartId`; shows ticket cards + QR per ticket |
 | `payments/failure/` `payments/cancel/` | Maya redirect pages |
 | `scanner/` | Guard QR scanner — ZXing camera, calls `GET /tickets/verify/:ticketId`, full-screen PWA |
 | `admin/` | Dashboard, orders, games CRUD, reports |
+
+### Purchase panel (frontend)
+
+`TicketPurchasePanel` uses a `Map<ticketTypeId, { type, quantity }>` cart. `TicketTypeCard` renders as a `<button>` (add to cart) when `cartQty === 0`, and as a `<div>` with a qty stepper when `cartQty > 0`. Grand total = tickets subtotal + web service fees. Buyer must select country (10 options: PH, US, AU, CA, NZ, IT, EU, GB, AE, JP) for team commission tracking. All dates formatted with `timeZone: 'Asia/Manila'` to prevent UTC/PHT off-by-one on Vercel.
+
+### TicketType model
+
+Key fields: `price`, `serviceFee` (web service fee per purchase unit, default 0, shouldered by buyer), `quantity`, `sold`, `scope` ('day'|'all'), `ticketsPerPurchase`, `active`. `available` and `urgencyBadge` are server-computed and injected by `GET /games`.
 
 ### Game model
 

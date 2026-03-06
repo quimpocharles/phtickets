@@ -3,42 +3,28 @@
 import React, { Suspense, useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import type { CartOrderResponse } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
-interface Ticket {
+// Flattened ticket with its parent order metadata
+interface FlatTicket {
   _id: string;
   ticketId: string;
   qrCodeUrl: string;
   status: string;
-}
-
-interface Order {
   orderNumber: string;
-  buyerName: string | null;
-  buyerEmail: string;
-  quantity: number;
-  totalAmount: number;
-  gameId: {
-    description: string;
-    venue: string;
-    gameDate: string;
-    eventEndDate: string;
-  };
-  ticketTypeId: {
-    name: string;
-    price: number;
-    scope: string;
-  };
+  ticketTypeName: string;
+  ticketTypeScope: string;
+  orderTotal: number;
 }
 
 function SuccessContent() {
   const searchParams = useSearchParams();
   const ref = searchParams.get('ref');
 
-  const [order, setOrder]     = useState<Order | null>(null);
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [status, setStatus]   = useState<'loading' | 'ready' | 'error'>('loading');
+  const [data, setData]     = useState<CartOrderResponse['data'] | null>(null);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const attemptsRef = useRef(0);
 
   useEffect(() => {
@@ -48,12 +34,11 @@ function SuccessContent() {
 
     async function fetchOrder(): Promise<boolean> {
       try {
-        const res  = await fetch(`${API_URL}/tickets/order/${ref}`);
-        const json = await res.json();
+        const res  = await fetch(`${API_URL}/tickets/order/cart/${ref}`);
+        const json: CartOrderResponse = await res.json();
         if (res.ok && json.success) {
           if (!cancelled) {
-            setOrder(json.data.order);
-            setTickets(json.data.tickets);
+            setData(json.data);
             setStatus('ready');
           }
           return true;
@@ -63,14 +48,19 @@ function SuccessContent() {
     }
 
     async function poll() {
-      // First try: check if webhook already processed it
       if (await fetchOrder()) return;
       attemptsRef.current += 1;
 
-      // After 3 failed polls (~9s), trigger the client-side fallback
+      // After 3 failed polls (~15s), trigger the client-side fallback
       if (attemptsRef.current === 3) {
         try {
-          await fetch(`${API_URL}/payments/process/${ref}`, { method: 'POST' });
+          const res  = await fetch(`${API_URL}/payments/process/${ref}`, { method: 'POST' });
+          const json = await res.json();
+          if (res.ok && json.success && !cancelled) {
+            setData(json.data);
+            setStatus('ready');
+            return;
+          }
         } catch { /* ignore */ }
       }
 
@@ -117,7 +107,7 @@ function SuccessContent() {
     );
   }
 
-  const game     = order!.gameId;
+  const { game, buyer, grandTotal, orders } = data!;
   const gameDate = new Date(game.gameDate);
   const dateStr  = gameDate.toLocaleDateString('en-PH', {
     month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila',
@@ -125,7 +115,17 @@ function SuccessContent() {
   const timeStr = gameDate.toLocaleTimeString('en-PH', {
     hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila',
   });
-  const isAllEvents = order!.ticketTypeId.scope === 'all';
+
+  // Flatten all tickets with their order metadata
+  const allTickets: FlatTicket[] = orders.flatMap((o) =>
+    o.tickets.map((t) => ({
+      ...t,
+      orderNumber:     o.orderNumber,
+      ticketTypeName:  o.ticketTypeName,
+      ticketTypeScope: o.ticketTypeScope,
+      orderTotal:      o.totalAmount,
+    }))
+  );
 
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-4">
@@ -158,7 +158,7 @@ function SuccessContent() {
 
       {/* ── Ticket cards ── */}
       <div className="flex flex-col gap-6 items-center">
-        {tickets.map((ticket, idx) => (
+        {allTickets.map((ticket, idx) => (
           <div
             key={ticket._id}
             className="ticket-card bg-white w-full max-w-sm rounded-2xl shadow-lg overflow-hidden"
@@ -188,7 +188,7 @@ function SuccessContent() {
                   </TicketDetail>
                   <TicketDetail label="Total Paid" align="right">
                     <span className="font-bold text-gray-900 text-lg">
-                      ₱{order!.totalAmount.toLocaleString()}
+                      ₱{grandTotal.toLocaleString()}
                     </span>
                   </TicketDetail>
                 </div>
@@ -196,20 +196,20 @@ function SuccessContent() {
                 <div className="flex justify-between items-start">
                   <TicketDetail label="Order Number">
                     <span className="font-mono font-semibold text-gray-900 tracking-wide">
-                      {order!.orderNumber}
+                      {ticket.orderNumber}
                     </span>
                   </TicketDetail>
                   <TicketDetail label="Ticket" align="right">
                     <span className="font-semibold text-gray-900">
-                      {idx + 1} / {tickets.length}
+                      {idx + 1} / {allTickets.length}
                     </span>
                   </TicketDetail>
                 </div>
 
                 <TicketDetail label="Ticket Type">
-                  <span className="font-semibold text-gray-900">{order!.ticketTypeId.name}</span>
+                  <span className="font-semibold text-gray-900">{ticket.ticketTypeName}</span>
                   <span className="text-gray-500 text-sm">
-                    {isAllEvents ? 'Valid all event days' : 'Single day pass'}
+                    {ticket.ticketTypeScope === 'all' ? 'Valid all event days' : 'Single day pass'}
                   </span>
                 </TicketDetail>
 
@@ -217,9 +217,9 @@ function SuccessContent() {
                   <span className="text-gray-700">{game.venue}</span>
                 </TicketDetail>
 
-                {order!.buyerName && (
+                {buyer.name && (
                   <TicketDetail label="Holder">
-                    <span className="text-gray-700">{order!.buyerName}</span>
+                    <span className="text-gray-700">{buyer.name}</span>
                   </TicketDetail>
                 )}
               </div>
@@ -249,7 +249,7 @@ function SuccessContent() {
         ))}
 
         <p className="no-print text-xs text-gray-400 pb-8 text-center">
-          Tickets also sent to {order!.buyerEmail}
+          Tickets also sent to {buyer.email}
         </p>
       </div>
 

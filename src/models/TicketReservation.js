@@ -16,6 +16,8 @@ const ticketReservationSchema = new mongoose.Schema({
   buyerPhone:  { type: String, required: true },
   buyerName:   { type: String, default: null },
   country:     { type: String, default: null },
+  // Shared across all reservations in one purchase. Used as Maya requestReferenceNumber.
+  cartId:      { type: String, default: null },
   status: {
     type: String,
     enum: ['reserved', 'completed', 'expired'],
@@ -37,6 +39,7 @@ ticketReservationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 // Supports the active-reservation aggregate and claim query.
 ticketReservationSchema.index({ ticketTypeId: 1, status: 1, expiresAt: 1 });
+ticketReservationSchema.index({ cartId: 1 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

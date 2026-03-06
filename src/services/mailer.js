@@ -13,17 +13,21 @@ const transporter = nodemailer.createTransport({
 
 /**
  * Send ticket confirmation email with QR codes.
- * @param {{ to, buyerName, orderNumber, totalAmount, ticketTypeName, game, tickets }} opts
+ *
+ * allTickets is a flat array where each item has:
+ *   { ticketId, ticketTypeName, orderNumber, ... }
+ *
+ * @param {{ to, buyerName, game, grandTotal, allTickets }} opts
  */
-async function sendTicketEmail({ to, buyerName, orderNumber, totalAmount, ticketTypeName, game, tickets }) {
+async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) {
   const gameDate = new Date(game.gameDate);
-  const dateStr  = gameDate.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
-  const timeStr  = gameDate.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const dateStr  = gameDate.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' });
+  const timeStr  = gameDate.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila' });
 
   // Build one ticket card per ticket, QR embedded as base64
   const ticketCards = (
     await Promise.all(
-      tickets.map(async (t, idx) => {
+      allTickets.map(async (t, idx) => {
         const dataUri = await QRCode.toDataURL(t.ticketId, {
           errorCorrectionLevel: 'H',
           width: 220,
@@ -51,23 +55,23 @@ async function sendTicketEmail({ to, buyerName, orderNumber, totalAmount, ticket
                   </td>
                   <td style="padding-bottom:14px;vertical-align:top;text-align:right;">
                     <p style="margin:0 0 3px;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9ca3af;">Total Paid</p>
-                    <p style="margin:0;font-size:18px;font-weight:800;color:#111827;">&#8369;${(totalAmount || 0).toLocaleString()}</p>
+                    <p style="margin:0;font-size:18px;font-weight:800;color:#111827;">&#8369;${(grandTotal || 0).toLocaleString()}</p>
                   </td>
                 </tr>
                 <tr>
                   <td style="padding-bottom:14px;vertical-align:top;">
                     <p style="margin:0 0 3px;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9ca3af;">Order Number</p>
-                    <p style="margin:0;font-size:13px;font-weight:700;color:#111827;font-family:monospace;">${orderNumber}</p>
+                    <p style="margin:0;font-size:13px;font-weight:700;color:#111827;font-family:monospace;">${t.orderNumber || ''}</p>
                   </td>
                   <td style="padding-bottom:14px;vertical-align:top;text-align:right;">
                     <p style="margin:0 0 3px;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9ca3af;">Ticket</p>
-                    <p style="margin:0;font-size:14px;font-weight:600;color:#111827;">${idx + 1} / ${tickets.length}</p>
+                    <p style="margin:0;font-size:14px;font-weight:600;color:#111827;">${idx + 1} / ${allTickets.length}</p>
                   </td>
                 </tr>
                 <tr>
                   <td style="padding-bottom:14px;vertical-align:top;" colspan="2">
                     <p style="margin:0 0 3px;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9ca3af;">Ticket Type</p>
-                    <p style="margin:0;font-size:14px;font-weight:600;color:#111827;">${ticketTypeName || ''}</p>
+                    <p style="margin:0;font-size:14px;font-weight:600;color:#111827;">${t.ticketTypeName || ''}</p>
                   </td>
                 </tr>
                 <tr>
@@ -156,7 +160,7 @@ async function sendTicketEmail({ to, buyerName, orderNumber, totalAmount, ticket
   await transporter.sendMail({
     from,
     to,
-    subject: `Your Global Hoops Tickets – Order ${orderNumber}`,
+    subject: `Your Global Hoops Tickets – Order ${allTickets[0]?.orderNumber ?? ''}`,
     html,
   });
 

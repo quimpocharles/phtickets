@@ -8,15 +8,18 @@ interface TicketType {
   __v: number;
   name: string;
   price: number;
+  serviceFee: number;
   quantity: number;
   sold: number;
   scope: 'day' | 'all';
   ticketsPerPurchase: number;
+  active: boolean;
 }
 
 interface EditForm {
   name: string;
   price: string;
+  serviceFee: string;
   quantity: string;
   scope: 'day' | 'all';
   ticketsPerPurchase: string;
@@ -26,6 +29,7 @@ interface EditForm {
 interface EditErrors {
   name?: string;
   price?: string;
+  serviceFee?: string;
   quantity?: string;
   ticketsPerPurchase?: string;
 }
@@ -42,6 +46,7 @@ interface Game {
 interface RowForm {
   name: string;
   price: string;
+  serviceFee: string;
   quantity: string;
   scope: 'day' | 'all';
   ticketsPerPurchase: string;
@@ -50,11 +55,12 @@ interface RowForm {
 interface RowErrors {
   name?: string;
   price?: string;
+  serviceFee?: string;
   quantity?: string;
   ticketsPerPurchase?: string;
 }
 
-const EMPTY_ROW: RowForm = { name: '', price: '', quantity: '', scope: 'day', ticketsPerPurchase: '1' };
+const EMPTY_ROW: RowForm = { name: '', price: '', serviceFee: '0', quantity: '', scope: 'day', ticketsPerPurchase: '1' };
 
 const PRESET_NAMES = [
   'Single Day Pass',
@@ -67,6 +73,7 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
   const router = useRouter();
   const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
+  const [adminRole, setAdminRole] = useState<string>('admin');
   const [game, setGame] = useState<Game | null>(null);
   const [loadingGame, setLoadingGame] = useState(true);
   const [rows, setRows] = useState<RowForm[]>([{ ...EMPTY_ROW }]);
@@ -74,6 +81,36 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [successCount, setSuccessCount] = useState<number | null>(null);
+
+  // ── Delete state ─────────────────────────────────────────────────────────────
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  async function handleDelete(ticketTypeId: string) {
+    setDeleting(true);
+    setDeleteError(null);
+    const token = localStorage.getItem('adminToken');
+    try {
+      const res = await fetch(`${API_URL}/admin/games/${gameId}/tickets/${ticketTypeId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 401) {
+        localStorage.removeItem('adminToken');
+        router.replace('/admin/login');
+        return;
+      }
+      const json = await res.json();
+      if (!res.ok) { setDeleteError(json.message ?? 'Failed to delete ticket type.'); return; }
+      setConfirmDeleteId(null);
+      loadGame();
+    } catch {
+      setDeleteError('Could not reach the server. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   // ── Edit state ───────────────────────────────────────────────────────────────
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -86,11 +123,14 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
   const loadGame = useCallback(async () => {
     setLoadingGame(true);
     try {
-      const res = await fetch(`${API_URL}/games`);
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch(`${API_URL}/admin/games/${gameId}/tickets`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 401) { router.replace('/admin/login'); return; }
       const json = await res.json();
-      const found: Game = json.data?.find((g: Game) => g._id === gameId) ?? null;
-      if (!found) { router.replace('/admin'); return; }
-      setGame(found);
+      if (!res.ok || !json.data) { router.replace('/admin'); return; }
+      setGame(json.data);
     } catch {
       router.replace('/admin');
     } finally {
@@ -100,6 +140,7 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
 
   useEffect(() => {
     if (!localStorage.getItem('adminToken')) { router.replace('/admin/login'); return; }
+    setAdminRole(localStorage.getItem('adminRole') ?? 'admin');
     loadGame();
   }, [loadGame, router]);
 
@@ -139,6 +180,7 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
     setEditForm({
       name:               tt.name,
       price:              String(tt.price),
+      serviceFee:         String(tt.serviceFee ?? 0),
       quantity:           String(tt.quantity),
       scope:              tt.scope,
       ticketsPerPurchase: String(tt.ticketsPerPurchase),
@@ -164,10 +206,12 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
   function validateEdit(): boolean {
     if (!editForm) return false;
     const e: EditErrors = {};
-    if (!editForm.name.trim())                                                        e.name     = 'Required.';
-    if (!editForm.price || isNaN(Number(editForm.price)))                             e.price    = 'Enter a valid price.';
-    else if (Number(editForm.price) < 0)                                              e.price    = 'Must be 0 or more.';
-    if (!editForm.quantity || isNaN(Number(editForm.quantity)))                       e.quantity = 'Enter a valid number.';
+    if (!editForm.name.trim())                                                        e.name       = 'Required.';
+    if (!editForm.price || isNaN(Number(editForm.price)))                             e.price      = 'Enter a valid price.';
+    else if (Number(editForm.price) < 0)                                              e.price      = 'Must be 0 or more.';
+    if (editForm.serviceFee === '' || isNaN(Number(editForm.serviceFee)))             e.serviceFee = 'Enter a valid fee.';
+    else if (Number(editForm.serviceFee) < 0)                                         e.serviceFee = 'Must be 0 or more.';
+    if (!editForm.quantity || isNaN(Number(editForm.quantity)))                       e.quantity   = 'Enter a valid number.';
     else if (!Number.isInteger(Number(editForm.quantity)) || Number(editForm.quantity) < 1)
       e.quantity = 'Must be a whole number ≥ 1.';
     if (!editForm.ticketsPerPurchase || isNaN(Number(editForm.ticketsPerPurchase)))   e.ticketsPerPurchase = 'Enter a valid number.';
@@ -196,6 +240,7 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
         body: JSON.stringify({
           name:               editForm.name.trim(),
           price:              Number(editForm.price),
+          serviceFee:         Number(editForm.serviceFee),
           quantity:           Number(editForm.quantity),
           scope:              editForm.scope,
           ticketsPerPurchase: Number(editForm.ticketsPerPurchase),
@@ -226,10 +271,12 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
   function validate(): boolean {
     const nextErrors = rows.map((row) => {
       const e: RowErrors = {};
-      if (!row.name.trim())                                                       e.name     = 'Required.';
-      if (!row.price || isNaN(Number(row.price)))                                 e.price    = 'Enter a valid price.';
-      else if (Number(row.price) < 0)                                             e.price    = 'Must be 0 or more.';
-      if (!row.quantity || isNaN(Number(row.quantity)))                           e.quantity = 'Enter a valid number.';
+      if (!row.name.trim())                                                       e.name       = 'Required.';
+      if (!row.price || isNaN(Number(row.price)))                                 e.price      = 'Enter a valid price.';
+      else if (Number(row.price) < 0)                                             e.price      = 'Must be 0 or more.';
+      if (row.serviceFee === '' || isNaN(Number(row.serviceFee)))                 e.serviceFee = 'Enter a valid fee.';
+      else if (Number(row.serviceFee) < 0)                                        e.serviceFee = 'Must be 0 or more.';
+      if (!row.quantity || isNaN(Number(row.quantity)))                           e.quantity   = 'Enter a valid number.';
       else if (!Number.isInteger(Number(row.quantity)) || Number(row.quantity) < 1)
         e.quantity = 'Must be a whole number ≥ 1.';
       if (!row.ticketsPerPurchase || isNaN(Number(row.ticketsPerPurchase)))       e.ticketsPerPurchase = 'Enter a valid number.';
@@ -254,6 +301,7 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
     const payload = rows.map((r) => ({
       name:               r.name.trim(),
       price:              Number(r.price),
+      serviceFee:         Number(r.serviceFee),
       quantity:           Number(r.quantity),
       scope:              r.scope,
       ticketsPerPurchase: Number(r.ticketsPerPurchase),
@@ -341,6 +389,7 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
                   <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Scope</th>
                   <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">QRs / Purchase</th>
                   <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Price</th>
+                  <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Svc Fee</th>
                   <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Capacity</th>
                   <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Sold</th>
                   <th className="px-6 py-3" />
@@ -348,7 +397,7 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
               </thead>
               <tbody className="divide-y divide-black/5">
                 {game.ticketTypes.map((tt) => (
-                  <tr key={tt._id} className={`transition-colors ${editingId === tt._id ? 'bg-primary/5' : 'hover:bg-offwhite/40'}`}>
+                  <tr key={tt._id} className={`transition-colors ${!tt.active ? 'opacity-40' : editingId === tt._id ? 'bg-primary/5' : 'hover:bg-offwhite/40'}`}>
                     <td className="px-6 py-3 font-semibold text-offblack">{tt.name}</td>
                     <td className="px-4 py-3">
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full
@@ -361,6 +410,7 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
                     </td>
                     <td className="px-4 py-3 text-right text-offblack/70">{tt.ticketsPerPurchase}</td>
                     <td className="px-4 py-3 text-right text-offblack/70">₱{tt.price.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right text-offblack/70">₱{(tt.serviceFee ?? 0).toLocaleString()}</td>
                     <td className="px-4 py-3 text-right text-offblack/70">{tt.quantity.toLocaleString()}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={tt.sold > 0 ? 'font-semibold text-primary' : 'text-offblack/40'}>
@@ -376,20 +426,64 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
                         >
                           Cancel
                         </button>
+                      ) : confirmDeleteId === tt._id ? (
+                        <span className="inline-flex items-center gap-2">
+                          <span className="text-xs text-offblack/50">
+                            {adminRole === 'super_admin' && (game.ticketTypes.find(t => t._id === confirmDeleteId)?.sold ?? 1) === 0 ? 'Delete?' : 'Deactivate?'}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={deleting}
+                            onClick={() => handleDelete(tt._id)}
+                            className="text-xs font-bold text-danger hover:text-danger/70 transition-colors disabled:opacity-50"
+                          >
+                            {deleting ? '…' : 'Yes'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setConfirmDeleteId(null); setDeleteError(null); }}
+                            className="text-xs font-semibold text-offblack/40 hover:text-offblack transition-colors"
+                          >
+                            No
+                          </button>
+                        </span>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() => startEdit(tt)}
-                          className="text-xs font-semibold text-primary hover:text-primary/70 transition-colors"
-                        >
-                          Edit
-                        </button>
+                        <span className="inline-flex items-center gap-3">
+                          {tt.active && (
+                            <button
+                              type="button"
+                              onClick={() => startEdit(tt)}
+                              className="text-xs font-semibold text-primary hover:text-primary/70 transition-colors"
+                            >
+                              Edit
+                            </button>
+                          )}
+                          {tt.active && (
+                            <button
+                              type="button"
+                              onClick={() => { setConfirmDeleteId(tt._id); setDeleteError(null); }}
+                              className="text-xs font-semibold text-danger/50 hover:text-danger transition-colors"
+                            >
+                              {adminRole === 'super_admin' && tt.sold === 0 ? 'Delete' : 'Deactivate'}
+                            </button>
+                          )}
+                          {!tt.active && (
+                            <span className="text-xs text-offblack/40 italic">Deactivated</span>
+                          )}
+                        </span>
                       )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
+            {/* ── Delete error ── */}
+            {deleteError && (
+              <div className="border-t border-black/8 px-6 py-3 bg-danger/5">
+                <p className="text-sm text-danger font-medium">{deleteError}</p>
+              </div>
+            )}
 
             {/* ── Inline edit panel ── */}
             {editingId && editForm && (
@@ -431,8 +525,8 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
                     </div>
                   </div>
 
-                  {/* Price + Quantity + QRs */}
-                  <div className="grid grid-cols-3 gap-3">
+                  {/* Price + Service Fee + Quantity + QRs */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="flex flex-col gap-1">
                       <label className="text-xs font-semibold text-offblack/50 uppercase tracking-wide">Price (₱)</label>
                       <input
@@ -445,6 +539,19 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
                           ${editErrors.price ? 'border-danger focus:ring-danger/20' : 'border-black/12 focus:ring-primary/20 focus:border-primary/50'}`}
                       />
                       {editErrors.price && <p className="text-[11px] text-danger font-medium">{editErrors.price}</p>}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-offblack/50 uppercase tracking-wide">Svc Fee (₱)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={editForm.serviceFee}
+                        onChange={(e) => updateEditField('serviceFee', e.target.value)}
+                        className={`w-full rounded-lg border px-3 py-2.5 text-sm bg-white text-offblack
+                          focus:outline-none focus:ring-2 focus:bg-white transition-all
+                          ${editErrors.serviceFee ? 'border-danger focus:ring-danger/20' : 'border-black/12 focus:ring-primary/20 focus:border-primary/50'}`}
+                      />
+                      {editErrors.serviceFee && <p className="text-[11px] text-danger font-medium">{editErrors.serviceFee}</p>}
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-xs font-semibold text-offblack/50 uppercase tracking-wide">Capacity</label>
@@ -594,8 +701,8 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
                 </div>
               </div>
 
-              {/* Price + Quantity + QRs per purchase */}
-              <div className="grid grid-cols-3 gap-3">
+              {/* Price + Service Fee + Quantity + QRs per purchase */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {/* Price */}
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-offblack/50 uppercase tracking-wide">Price (₱)</label>
@@ -610,6 +717,22 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
                       ${rowErrors[i]?.price ? 'border-danger focus:ring-danger/20' : 'border-black/12 focus:ring-primary/20 focus:border-primary/50'}`}
                   />
                   {rowErrors[i]?.price && <p className="text-[11px] text-danger font-medium">{rowErrors[i].price}</p>}
+                </div>
+
+                {/* Service Fee */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-offblack/50 uppercase tracking-wide">Svc Fee (₱)</label>
+                  <input
+                    type="number"
+                    placeholder="20"
+                    min={0}
+                    value={row.serviceFee}
+                    onChange={(e) => updateRow(i, 'serviceFee', e.target.value)}
+                    className={`w-full rounded-lg border px-3 py-2.5 text-sm bg-offwhite/50 text-offblack
+                      placeholder:text-offblack/25 focus:outline-none focus:ring-2 focus:bg-white transition-all
+                      ${rowErrors[i]?.serviceFee ? 'border-danger focus:ring-danger/20' : 'border-black/12 focus:ring-primary/20 focus:border-primary/50'}`}
+                  />
+                  {rowErrors[i]?.serviceFee && <p className="text-[11px] text-danger font-medium">{rowErrors[i].serviceFee}</p>}
                 </div>
 
                 {/* Quantity */}
