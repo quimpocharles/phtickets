@@ -101,10 +101,13 @@ export default function TicketPurchasePanel({ game }: Props) {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       next.email = 'Enter a valid email address.';
     }
+    if (!form.name.trim()) {
+      next.name = 'Name is required.';
+    }
     if (!form.phone.trim()) {
       next.phone = 'Phone number is required.';
-    } else if (!/^(09|\+639)\d{9}$/.test(form.phone.trim())) {
-      next.phone = 'Enter a valid PH number (e.g. 09171234567).';
+    } else if (!/^\+?[\d\s\-().]{7,20}$/.test(form.phone.trim())) {
+      next.phone = 'Enter a valid phone number (e.g. +1 555 123 4567 or 09171234567).';
     }
     if (!form.country) {
       next.country = 'Please select your country.';
@@ -268,12 +271,12 @@ export default function TicketPurchasePanel({ game }: Props) {
             <Field label="Email" required type="email" placeholder="you@example.com"
               value={form.email} onChange={(v) => setForm((f) => ({ ...f, email: v }))} error={errors.email} />
 
-            <Field label="Phone" required type="tel" placeholder="09171234567"
+            <Field label="Phone" required type="tel" placeholder="+1 555 123 4567 or 09171234567"
               value={form.phone} onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
-              error={errors.phone} hint="Philippine mobile number" />
+              error={errors.phone} hint="Include country code for international numbers" />
 
-            <Field label="Name" type="text" placeholder="Juan dela Cruz"
-              value={form.name} onChange={(v) => setForm((f) => ({ ...f, name: v }))} optional />
+            <Field label="Name" required type="text" placeholder="Juan dela Cruz"
+              value={form.name} onChange={(v) => setForm((f) => ({ ...f, name: v }))} error={errors.name} />
 
             {/* Country selector */}
             <div>
