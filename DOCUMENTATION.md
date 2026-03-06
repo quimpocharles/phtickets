@@ -634,6 +634,7 @@ Protected by JWT stored in `localStorage`. All requests include `Authorization: 
 | `/payments/failure` | Payment failure page |
 | `/payments/cancel` | Payment cancelled page |
 | `/scanner` | QR camera scanner for gate staff (JWT required) |
+| `/legal` | Combined Terms & Conditions and Privacy Policy page |
 
 ### Components
 
@@ -641,7 +642,7 @@ Protected by JWT stored in `localStorage`. All requests include `Authorization: 
 |---|---|
 | `Navbar` | Floating frosted-glass navbar (Apple-style); shrinks on scroll; logo centred |
 | `TicketTypeCard` | Ticket tier card with stacked design, urgency starburst badge, three states (default / selected / sold-out) |
-| `TicketPurchasePanel` | Desktop/tablet: two-column layout. Mobile: full-width ticket list + floating cart button opens side drawer |
+| `TicketPurchasePanel` | Desktop/tablet: two-column layout. Mobile: full-width ticket list + floating cart button opens side drawer. Includes required Terms & Privacy checkbox that must be ticked before "Proceed to Payment" is enabled |
 | `GameCard` | Game tile with banner, description, venue, date |
 | `Badge` | Urgency badge renderer |
 | `TeamSearchDropdown` | Searchable team selector used in game creation form |
@@ -649,7 +650,7 @@ Protected by JWT stored in `localStorage`. All requests include `Authorization: 
 ### Banner Design
 
 The game detail page banner (`/tickets/:gameId`) uses a ticket-stub layout:
-- **Left**: dark background, yellow "NBTC Tickets" label, large white game title, tagline
+- **Left**: dark background, yellow "NBTC Tickets" label, large white game title, tagline (visible on all screen sizes)
 - **Bottom strip**: scrolling marquee (CSS animation) — `landing.png` thumbnail → date chip (yellow) → venue (blue) → game description (red), loops infinitely
 - **Right panel**: dashed separator, `smart-nbtc-por.png` logo, off-white background
 - Bottom of banner: dashed primary-blue border (matching ticket card weight)

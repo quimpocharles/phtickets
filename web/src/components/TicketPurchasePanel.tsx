@@ -35,6 +35,7 @@ export default function TicketPurchasePanel({ game }: Props) {
   const [reservation, setReservation] = useState<Reservation | null>(null);
   const [timeLeft, setTimeLeft] = useState(0); // seconds
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const remaining = selectedType ? selectedType.available : 0;
   const maxQty = Math.min(remaining, 15);
@@ -71,6 +72,7 @@ export default function TicketPurchasePanel({ game }: Props) {
     setApiError(null);
     setErrors({});
     setReservation(null);
+    setAgreedToTerms(false);
   }
 
   function changeQty(delta: number) {
@@ -196,6 +198,10 @@ export default function TicketPurchasePanel({ game }: Props) {
                 <div className="text-center space-y-1">
               <p className="text-xs text-offblack/30">Powered by Maya · Secure checkout</p>
               <p className="text-xs text-offblack/40">Visa · Mastercard · JCB · Amex · QR Ph accepted</p>
+              <p className="text-xs text-offblack/30">
+                By proceeding you agree to our{' '}
+                <a href="/legal" className="underline hover:text-primary transition-colors">Terms &amp; Privacy</a>
+              </p>
             </div>
               </>
             )}
@@ -248,9 +254,30 @@ export default function TicketPurchasePanel({ game }: Props) {
               <p className="text-sm text-danger font-medium bg-danger/5 rounded-lg px-3 py-2">{apiError}</p>
             )}
 
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                className="mt-0.5 w-4 h-4 shrink-0 rounded border-black/20 text-primary accent-primary cursor-pointer"
+              />
+              <span className="text-xs text-offblack/50 leading-relaxed">
+                I agree to the{' '}
+                <a
+                  href="/legal"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-primary transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Terms &amp; Privacy Policy
+                </a>
+              </span>
+            </label>
+
             <button
               type="submit"
-              disabled={loading || overLimit}
+              disabled={loading || overLimit || !agreedToTerms}
               className="w-full bg-primary hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed
                 text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2"
             >

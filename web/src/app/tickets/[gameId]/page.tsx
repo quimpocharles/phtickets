@@ -88,7 +88,7 @@ export default async function GameDetailPage({ params }: Props) {
               <h1 className="text-white font-black uppercase text-2xl sm:text-4xl leading-tight mb-2 max-w-2xl">
                 {game.description}
               </h1>
-              <p className="text-white/50 text-sm hidden sm:block">
+              <p className="text-white/50 text-sm">
                 Get your tickets in 5 easy steps &mdash; no log-in needed.
               </p>
             </div>
