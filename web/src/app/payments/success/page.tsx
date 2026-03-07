@@ -149,15 +149,13 @@ function SuccessContent() {
             className="ticket-card w-full max-w-xl shadow-2xl flex"
             style={{ borderRadius: '20px', overflow: 'hidden' }}
           >
-            {/* ── Left: Event image (object-contain so nothing is cropped) ── */}
-            <div className="relative bg-black shrink-0" style={{ width: 180 }}>
-              <Image
+            {/* ── Left: Event image — fills full card height at natural aspect ratio ── */}
+            <div className="bg-black shrink-0 self-stretch overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src="/smart-gh.jpg"
                 alt="Smart Global Hoops 2026"
-                fill
-                className="object-contain"
-                unoptimized
-                priority
+                style={{ display: 'block', height: '100%', width: 'auto' }}
               />
             </div>
 
@@ -193,8 +191,8 @@ function SuccessContent() {
                     <p className="text-lg font-black text-gray-900 mt-0.5">₱{grandTotal.toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Order Number</p>
-                    <p className="text-[10px] font-bold font-mono text-gray-900 mt-0.5 tracking-wide">{ticket.orderNumber}</p>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Ticket No.</p>
+                    <p className="text-[10px] font-bold font-mono text-gray-900 mt-0.5 tracking-wide">{ticket.ticketId}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Venue</p>

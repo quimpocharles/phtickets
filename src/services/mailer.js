@@ -51,11 +51,11 @@ async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) 
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto 40px;border-radius:20px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
           <tr>
 
-            <!-- Left: event image (object-contain so logo is never cropped) -->
-            <td width="170" style="width:170px;min-width:170px;background:#111827;vertical-align:middle;padding:0;">
+            <!-- Left: event image — 3:4 ratio fills the full card height -->
+            <td width="225" style="width:225px;min-width:225px;background:#111827;vertical-align:top;padding:0;">
               ${bannerDataUri
-                ? `<img src="${bannerDataUri}" width="170" style="display:block;width:170px;height:auto;" alt="Smart Global Hoops 2026" />`
-                : `<div style="width:170px;background:#111827;padding:20px 12px;text-align:center;">
+                ? `<img src="${bannerDataUri}" width="225" height="300" style="display:block;width:225px;height:300px;" alt="Smart Global Hoops 2026" />`
+                : `<div style="width:225px;height:300px;background:#111827;display:table-cell;vertical-align:middle;text-align:center;">
                      <p style="margin:0;color:#fed000;font-size:13px;font-weight:900;letter-spacing:0.05em;line-height:1.4;">SMART<br>GLOBAL<br>HOOPS<br>2026</p>
                    </div>`
               }
@@ -100,8 +100,8 @@ async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) 
                       </tr>
                       <tr>
                         <td style="padding-bottom:10px;vertical-align:top;">
-                          <p style="margin:0 0 2px;font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Order Number</p>
-                          <p style="margin:0;font-size:10px;font-weight:700;color:#111827;font-family:monospace;letter-spacing:0.04em;">${t.orderNumber || ''}</p>
+                          <p style="margin:0 0 2px;font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Ticket No.</p>
+                          <p style="margin:0;font-size:10px;font-weight:700;color:#111827;font-family:monospace;letter-spacing:0.04em;">${t.ticketId || ''}</p>
                         </td>
                         <td style="padding-bottom:10px;vertical-align:top;text-align:right;">
                           <p style="margin:0 0 2px;font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Venue</p>
