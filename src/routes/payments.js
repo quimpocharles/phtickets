@@ -163,7 +163,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         }
 
         for (const t of tickets) {
-          allTickets.push({ ...t.toObject(), ticketTypeName: ticketType.name, orderNumber: order.orderNumber });
+          allTickets.push({ ...t.toObject(), ticketTypeName: ticketType.name, ticketTypeScope: ticketType.scope, orderNumber: order.orderNumber });
         }
       }
 
@@ -308,7 +308,7 @@ router.post('/process/:cartId', async (req, res) => {
       if (alreadyDone) {
         const existingTickets = await Ticket.find({ orderId: alreadyDone._id });
         for (const t of existingTickets) {
-          allTickets.push({ ...t.toObject(), ticketTypeName: ticketType.name, orderNumber: alreadyDone.orderNumber });
+          allTickets.push({ ...t.toObject(), ticketTypeName: ticketType.name, ticketTypeScope: ticketType.scope, orderNumber: alreadyDone.orderNumber });
         }
         createdOrders.push(alreadyDone);
         if (!firstOrder) firstOrder = alreadyDone;
@@ -354,7 +354,7 @@ router.post('/process/:cartId', async (req, res) => {
       }
 
       for (const t of tickets) {
-        allTickets.push({ ...t.toObject(), ticketTypeName: ticketType.name, orderNumber: order.orderNumber });
+        allTickets.push({ ...t.toObject(), ticketTypeName: ticketType.name, ticketTypeScope: ticketType.scope, orderNumber: order.orderNumber });
       }
     }
 
