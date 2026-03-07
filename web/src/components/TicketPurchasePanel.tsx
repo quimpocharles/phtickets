@@ -33,7 +33,7 @@ const COUNTRIES = [
   { code: 'EU', label: 'European Union',   flag: '🇪🇺' },
   { code: 'GB', label: 'United Kingdom',   flag: '🇬🇧' },
   { code: 'AE', label: 'United Arab Emirates', flag: '🇦🇪' },
-  { code: 'JP', label: 'Japan',            flag: '🇯🇵' },
+  { code: 'MT', label: 'Malta',            flag: '🇲🇹' },
 ] as const;
 
 const EMPTY_FORM: FormState = { email: '', phone: '', name: '', country: '' };
