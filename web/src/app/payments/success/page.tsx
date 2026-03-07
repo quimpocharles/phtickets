@@ -149,13 +149,18 @@ function SuccessContent() {
             className="ticket-card w-full max-w-xl shadow-2xl flex"
             style={{ borderRadius: '20px', overflow: 'hidden' }}
           >
-            {/* ── Left: Event image — fills full card height at natural aspect ratio ── */}
-            <div className="bg-black shrink-0 self-stretch overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+            {/* ── Left: Event image — aspect-ratio 3/4 auto-sizes width to match card height ── */}
+            <div
+              className="relative bg-black shrink-0 self-stretch"
+              style={{ aspectRatio: '3/4' }}
+            >
+              <Image
                 src="/smart-gh.jpg"
                 alt="Smart Global Hoops 2026"
-                style={{ display: 'block', height: '100%', width: 'auto' }}
+                fill
+                className="object-contain"
+                unoptimized
+                priority
               />
             </div>
 
