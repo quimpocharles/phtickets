@@ -48,97 +48,105 @@ async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) 
         const scopeLabel = t.ticketTypeScope === 'all' ? 'All Events Pass' : 'Single Day Pass';
         return `
         <!-- Ticket ${idx + 1} -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:400px;margin:0 auto 40px;border-radius:20px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
-
-          <!-- Event banner -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto 40px;border-radius:20px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
           <tr>
-            <td style="padding:0;margin:0;height:180px;background:#111827;overflow:hidden;">
+
+            <!-- Left: event image (object-contain so logo is never cropped) -->
+            <td width="170" style="width:170px;min-width:170px;background:#111827;vertical-align:middle;padding:0;">
               ${bannerDataUri
-                ? `<img src="${bannerDataUri}" alt="Smart Global Hoops 2026" width="400" style="display:block;width:100%;height:180px;object-fit:cover;object-position:center;" />`
-                : `<div style="height:180px;background:#111827;display:flex;align-items:center;justify-content:center;">
-                     <p style="margin:0;color:#fed000;font-size:18px;font-weight:900;letter-spacing:0.05em;">SMART GLOBAL HOOPS 2026</p>
+                ? `<img src="${bannerDataUri}" width="170" style="display:block;width:170px;height:auto;" alt="Smart Global Hoops 2026" />`
+                : `<div style="width:170px;background:#111827;padding:20px 12px;text-align:center;">
+                     <p style="margin:0;color:#fed000;font-size:13px;font-weight:900;letter-spacing:0.05em;line-height:1.4;">SMART<br>GLOBAL<br>HOOPS<br>2026</p>
                    </div>`
               }
             </td>
-          </tr>
 
-          <!-- Ticket type band -->
-          <tr>
-            <td style="background:#111827;padding:12px 20px;">
+            <!-- Right: all ticket content as nested table -->
+            <td style="vertical-align:top;padding:0;">
               <table width="100%" cellpadding="0" cellspacing="0">
+
+                <!-- Ticket type band -->
                 <tr>
-                  <td style="vertical-align:middle;">
-                    <p style="margin:0;font-size:14px;font-weight:900;text-transform:uppercase;letter-spacing:0.06em;color:#fed000;line-height:1.2;">${t.ticketTypeName || ''}</p>
-                    <p style="margin:3px 0 0;font-size:11px;color:rgba(255,255,255,0.4);">${scopeLabel}</p>
-                  </td>
-                  <td style="vertical-align:middle;text-align:right;">
-                    <p style="margin:0;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.3);">Ticket</p>
-                    <p style="margin:2px 0 0;font-size:13px;font-weight:700;color:#ffffff;">${idx + 1} / ${allTickets.length}</p>
+                  <td style="background:#111827;padding:12px 16px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="vertical-align:middle;">
+                          <p style="margin:0;font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:0.06em;color:#fed000;line-height:1.2;">${t.ticketTypeName || ''}</p>
+                          <p style="margin:3px 0 0;font-size:10px;color:rgba(255,255,255,0.4);">${scopeLabel}</p>
+                        </td>
+                        <td style="vertical-align:middle;text-align:right;white-space:nowrap;padding-left:8px;">
+                          <p style="margin:0;font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.3);">Ticket</p>
+                          <p style="margin:2px 0 0;font-size:12px;font-weight:700;color:#ffffff;">${idx + 1} / ${allTickets.length}</p>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
+
+                <!-- Details -->
+                <tr>
+                  <td style="background:#ffffff;padding:14px 16px 10px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding-bottom:10px;vertical-align:top;width:50%;">
+                          <p style="margin:0 0 2px;font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Date &amp; Time</p>
+                          <p style="margin:0;font-size:12px;font-weight:600;color:#111827;">${dateStr}</p>
+                          <p style="margin:1px 0 0;font-size:10px;color:#6b7280;">${timeStr}</p>
+                        </td>
+                        <td style="padding-bottom:10px;vertical-align:top;text-align:right;">
+                          <p style="margin:0 0 2px;font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Total Paid</p>
+                          <p style="margin:0;font-size:18px;font-weight:900;color:#111827;">&#8369;${(grandTotal || 0).toLocaleString()}</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding-bottom:10px;vertical-align:top;">
+                          <p style="margin:0 0 2px;font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Order Number</p>
+                          <p style="margin:0;font-size:10px;font-weight:700;color:#111827;font-family:monospace;letter-spacing:0.04em;">${t.orderNumber || ''}</p>
+                        </td>
+                        <td style="padding-bottom:10px;vertical-align:top;text-align:right;">
+                          <p style="margin:0 0 2px;font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Venue</p>
+                          <p style="margin:0;font-size:10px;color:#374151;">${game.venue}</p>
+                        </td>
+                      </tr>
+                      ${buyerName ? `
+                      <tr>
+                        <td colspan="2">
+                          <p style="margin:0 0 2px;font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Ticket Holder</p>
+                          <p style="margin:0;font-size:12px;font-weight:600;color:#111827;">${buyerName}</p>
+                        </td>
+                      </tr>` : ''}
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Perforated separator -->
+                <tr>
+                  <td style="background:#ffffff;padding:6px 16px;">
+                    <div style="border-top:2px dashed #e5e7eb;"></div>
+                  </td>
+                </tr>
+
+                <!-- QR section -->
+                <tr>
+                  <td style="background:#ffffff;padding:12px 16px 16px;text-align:center;">
+                    <div style="display:inline-block;padding:8px;border:2px solid #f3f4f6;border-radius:12px;background:#ffffff;">
+                      <img src="${qrDataUri}" alt="QR code – ${t.ticketId}" width="160" height="160" style="display:block;" />
+                    </div>
+                    <p style="margin:8px 0 2px;font-family:monospace;font-size:10px;color:#9ca3af;letter-spacing:0.08em;">${t.ticketId}</p>
+                    <p style="margin:0;font-size:10px;font-weight:600;color:#6b7280;">Present at venue entrance</p>
+                  </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                  <td style="background:#f9fafb;border-top:1px solid #f3f4f6;padding:8px 16px;text-align:center;">
+                    <p style="margin:0;font-size:9px;color:#9ca3af;">Non-transferable &middot; Valid for one entry only &middot; Do not share QR code</p>
+                  </td>
+                </tr>
+
               </table>
             </td>
-          </tr>
 
-          <!-- Details section -->
-          <tr>
-            <td style="background:#ffffff;padding:20px 20px 16px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="padding-bottom:12px;vertical-align:top;width:50%;">
-                    <p style="margin:0 0 3px;font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Date &amp; Time</p>
-                    <p style="margin:0;font-size:13px;font-weight:600;color:#111827;">${dateStr}</p>
-                    <p style="margin:2px 0 0;font-size:11px;color:#6b7280;">${timeStr}</p>
-                  </td>
-                  <td style="padding-bottom:12px;vertical-align:top;text-align:right;">
-                    <p style="margin:0 0 3px;font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Total Paid</p>
-                    <p style="margin:0;font-size:20px;font-weight:900;color:#111827;">&#8369;${(grandTotal || 0).toLocaleString()}</p>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding-bottom:12px;vertical-align:top;">
-                    <p style="margin:0 0 3px;font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Order Number</p>
-                    <p style="margin:0;font-size:11px;font-weight:700;color:#111827;font-family:monospace;letter-spacing:0.05em;">${t.orderNumber || ''}</p>
-                  </td>
-                  <td style="padding-bottom:12px;vertical-align:top;text-align:right;">
-                    <p style="margin:0 0 3px;font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Venue</p>
-                    <p style="margin:0;font-size:11px;color:#374151;">${game.venue}</p>
-                  </td>
-                </tr>
-                ${buyerName ? `
-                <tr>
-                  <td style="vertical-align:top;" colspan="2">
-                    <p style="margin:0 0 3px;font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Ticket Holder</p>
-                    <p style="margin:0;font-size:13px;font-weight:600;color:#111827;">${buyerName}</p>
-                  </td>
-                </tr>` : ''}
-              </table>
-            </td>
-          </tr>
-
-          <!-- Perforated separator -->
-          <tr>
-            <td style="background:#ffffff;padding:8px 20px;">
-              <div style="border-top:2px dashed #e5e7eb;"></div>
-            </td>
-          </tr>
-
-          <!-- QR section -->
-          <tr>
-            <td style="background:#ffffff;padding:20px 20px 24px;text-align:center;">
-              <div style="display:inline-block;padding:12px;border:2px solid #f3f4f6;border-radius:16px;background:#ffffff;">
-                <img src="${qrDataUri}" alt="QR code – ${t.ticketId}" width="220" height="220" style="display:block;" />
-              </div>
-              <p style="margin:10px 0 2px;font-family:monospace;font-size:11px;color:#9ca3af;letter-spacing:0.1em;">${t.ticketId}</p>
-              <p style="margin:0;font-size:11px;font-weight:600;color:#6b7280;">Present at venue entrance</p>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="background:#f9fafb;border-top:1px solid #f3f4f6;padding:10px 20px;text-align:center;">
-              <p style="margin:0;font-size:10px;color:#9ca3af;">Non-transferable &middot; Valid for one entry only &middot; Do not share QR code</p>
-            </td>
           </tr>
         </table>`;
       })
@@ -153,7 +161,7 @@ async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) 
     <tr>
       <td>
         <!-- Header -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:400px;margin:0 auto 28px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto 28px;">
           <tr>
             <td>
               <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#6b7280;">Payment Confirmed</p>
@@ -165,7 +173,7 @@ async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) 
         ${ticketCards}
 
         <!-- Footer note -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:400px;margin:0 auto;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;">
           <tr>
             <td style="text-align:center;padding-bottom:32px;">
               <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.3);">Tickets sent to ${to}</p>

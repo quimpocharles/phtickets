@@ -125,7 +125,7 @@ function SuccessContent() {
       `}</style>
 
       {/* ── Actions bar ── */}
-      <div className="no-print max-w-sm mx-auto mb-8 flex items-center justify-between">
+      <div className="no-print max-w-xl mx-auto mb-8 flex items-center justify-between">
         <a href="/" className="text-sm text-white/40 hover:text-white/70 transition-colors">
           ← Back to games
         </a>
@@ -146,117 +146,116 @@ function SuccessContent() {
         {allTickets.map((ticket, idx) => (
           <div
             key={ticket._id}
-            className="ticket-card w-full max-w-sm shadow-2xl"
+            className="ticket-card w-full max-w-xl shadow-2xl flex"
             style={{ borderRadius: '20px', overflow: 'hidden' }}
           >
-            {/* ── Event banner ── */}
-            <div className="relative bg-black" style={{ height: '200px' }}>
+            {/* ── Left: Event image (object-contain so nothing is cropped) ── */}
+            <div className="relative bg-black shrink-0" style={{ width: 180 }}>
               <Image
                 src="/smart-gh.jpg"
                 alt="Smart Global Hoops 2026"
                 fill
-                className="object-cover object-center"
+                className="object-contain"
                 unoptimized
                 priority
               />
-              {/* Bottom fade so ticket type band blends in */}
-              <div
-                className="absolute inset-0"
-                style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.7) 100%)' }}
-              />
             </div>
 
-            {/* ── Ticket type band ── */}
-            <div className="bg-gray-900 px-5 py-3 flex items-center justify-between">
-              <div>
-                <p className="font-black text-base uppercase tracking-wide leading-tight" style={{ color: '#fed000' }}>
-                  {ticket.ticketTypeName}
-                </p>
-                <p className="text-white/40 text-xs mt-0.5">
-                  {ticket.ticketTypeScope === 'all' ? 'All Events Pass' : 'Single Day Pass'}
-                </p>
-              </div>
-              <div className="text-right shrink-0 ml-4">
-                <p className="text-white/30 text-xs uppercase tracking-wider">Ticket</p>
-                <p className="text-white font-bold text-sm">{idx + 1} / {allTickets.length}</p>
-              </div>
-            </div>
+            {/* ── Right: all ticket content ── */}
+            <div className="flex flex-col flex-1 min-w-0">
 
-            {/* ── Event details ── */}
-            <div className="bg-white px-5 pt-5 pb-4">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              {/* Ticket type band */}
+              <div className="bg-gray-900 px-4 py-3 flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Date &amp; Time</p>
-                  <p className="text-sm font-semibold text-gray-900 mt-0.5">{dateStr}</p>
-                  <p className="text-xs text-gray-500">{timeStr}</p>
+                  <p className="font-black text-sm uppercase tracking-wide leading-tight" style={{ color: '#fed000' }}>
+                    {ticket.ticketTypeName}
+                  </p>
+                  <p className="text-white/40 text-xs mt-0.5">
+                    {ticket.ticketTypeScope === 'all' ? 'All Events Pass' : 'Single Day Pass'}
+                  </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Total Paid</p>
-                  <p className="text-xl font-black text-gray-900 mt-0.5">₱{grandTotal.toLocaleString()}</p>
+                <div className="text-right shrink-0 ml-3">
+                  <p className="text-white/30 text-[10px] uppercase tracking-wider">Ticket</p>
+                  <p className="text-white font-bold text-sm">{idx + 1} / {allTickets.length}</p>
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Order Number</p>
-                  <p className="text-xs font-bold font-mono text-gray-900 mt-0.5 tracking-wide">{ticket.orderNumber}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Venue</p>
-                  <p className="text-xs text-gray-700 mt-0.5">{game.venue}</p>
-                </div>
-                {buyer.name && (
-                  <div className="col-span-2">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Ticket Holder</p>
-                    <p className="text-sm font-semibold text-gray-900 mt-0.5">{buyer.name}</p>
-                  </div>
-                )}
               </div>
-            </div>
 
-            {/* ── Perforated divider ── */}
-            <div className="relative bg-white py-2">
-              {/* Semicircle notches — same color as page bg so they look like cutouts */}
-              <div
-                className="absolute -left-4 top-1/2 -translate-y-1/2 rounded-full bg-black"
-                style={{ width: 32, height: 32 }}
-              />
-              <div
-                className="absolute -right-4 top-1/2 -translate-y-1/2 rounded-full bg-black"
-                style={{ width: 32, height: 32 }}
-              />
-              <div className="mx-5 border-t-2 border-dashed border-gray-200" />
-            </div>
-
-            {/* ── QR code ── */}
-            <div className="bg-white flex flex-col items-center px-5 pt-5 pb-6">
-              <div
-                className="bg-white"
-                style={{ padding: 12, border: '2px solid #f3f4f6', borderRadius: 16, display: 'inline-block' }}
-              >
-                {ticket.qrCodeUrl ? (
-                  <Image
-                    src={ticket.qrCodeUrl}
-                    alt={`QR code — ${ticket.ticketId}`}
-                    width={220}
-                    height={220}
-                    unoptimized
-                    priority
-                  />
-                ) : (
-                  <div
-                    style={{ width: 220, height: 220, background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <span className="text-xs text-gray-400">Loading QR…</span>
+              {/* Event details */}
+              <div className="bg-white px-4 pt-4 pb-3 flex-1">
+                <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
+                  <div>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Date &amp; Time</p>
+                    <p className="text-xs font-semibold text-gray-900 mt-0.5">{dateStr}</p>
+                    <p className="text-[11px] text-gray-500">{timeStr}</p>
                   </div>
-                )}
+                  <div className="text-right">
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Total Paid</p>
+                    <p className="text-lg font-black text-gray-900 mt-0.5">₱{grandTotal.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Order Number</p>
+                    <p className="text-[10px] font-bold font-mono text-gray-900 mt-0.5 tracking-wide">{ticket.orderNumber}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Venue</p>
+                    <p className="text-[11px] text-gray-700 mt-0.5">{game.venue}</p>
+                  </div>
+                  {buyer.name && (
+                    <div className="col-span-2">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Ticket Holder</p>
+                      <p className="text-xs font-semibold text-gray-900 mt-0.5">{buyer.name}</p>
+                    </div>
+                  )}
+                </div>
               </div>
-              <p className="mt-3 font-mono text-xs text-gray-400 tracking-widest">{ticket.ticketId}</p>
-              <p className="mt-1 text-xs font-semibold text-gray-500">Present at venue entrance</p>
-            </div>
 
-            {/* ── Footer ── */}
-            <div className="bg-gray-50 border-t border-gray-100 px-5 py-3 text-center">
-              <p className="text-xs text-gray-400">
-                Non-transferable &middot; Valid for one entry only &middot; Do not share QR code
-              </p>
+              {/* Perforated divider */}
+              <div className="relative bg-white py-2">
+                <div
+                  className="absolute -left-4 top-1/2 -translate-y-1/2 rounded-full bg-black"
+                  style={{ width: 32, height: 32 }}
+                />
+                <div
+                  className="absolute -right-4 top-1/2 -translate-y-1/2 rounded-full bg-black"
+                  style={{ width: 32, height: 32 }}
+                />
+                <div className="mx-4 border-t-2 border-dashed border-gray-200" />
+              </div>
+
+              {/* QR code */}
+              <div className="bg-white flex flex-col items-center px-4 pt-3 pb-4">
+                <div
+                  className="bg-white"
+                  style={{ padding: 8, border: '2px solid #f3f4f6', borderRadius: 12, display: 'inline-block' }}
+                >
+                  {ticket.qrCodeUrl ? (
+                    <Image
+                      src={ticket.qrCodeUrl}
+                      alt={`QR code — ${ticket.ticketId}`}
+                      width={160}
+                      height={160}
+                      unoptimized
+                      priority
+                    />
+                  ) : (
+                    <div
+                      style={{ width: 160, height: 160, background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <span className="text-xs text-gray-400">Loading QR…</span>
+                    </div>
+                  )}
+                </div>
+                <p className="mt-2 font-mono text-[10px] text-gray-400 tracking-widest">{ticket.ticketId}</p>
+                <p className="mt-0.5 text-[10px] font-semibold text-gray-500">Present at venue entrance</p>
+              </div>
+
+              {/* Footer */}
+              <div className="bg-gray-50 border-t border-gray-100 px-4 py-2.5 text-center">
+                <p className="text-[10px] text-gray-400">
+                  Non-transferable &middot; Valid for one entry only &middot; Do not share QR code
+                </p>
+              </div>
+
             </div>
           </div>
         ))}
