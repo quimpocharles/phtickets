@@ -140,7 +140,7 @@ async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) 
                 <!-- Footer -->
                 <tr>
                   <td style="background:#f9fafb;border-top:1px solid #f3f4f6;padding:8px 16px;text-align:center;">
-                    <p style="margin:0;font-size:9px;color:#9ca3af;">Non-transferable &middot; Valid for one entry only &middot; Do not share QR code</p>
+                    <p style="margin:0;font-size:9px;color:#9ca3af;">Non-transferable &middot; Do not share QR code</p>
                   </td>
                 </tr>
 

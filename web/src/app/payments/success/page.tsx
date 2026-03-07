@@ -252,7 +252,7 @@ function SuccessContent() {
               {/* Footer */}
               <div className="bg-gray-50 border-t border-gray-100 px-4 py-2.5 text-center">
                 <p className="text-[10px] text-gray-400">
-                  Non-transferable &middot; Valid for one entry only &middot; Do not share QR code
+                  Non-transferable &middot; Do not share QR code
                 </p>
               </div>
 
