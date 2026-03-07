@@ -125,7 +125,7 @@ function SuccessContent() {
       `}</style>
 
       {/* ── Actions bar ── */}
-      <div className="no-print max-w-xl mx-auto mb-8 flex items-center justify-between">
+      <div className="no-print max-w-2xl mx-auto mb-8 flex items-center justify-between">
         <a href="/" className="text-sm text-white/40 hover:text-white/70 transition-colors">
           ← Back to games
         </a>
@@ -146,14 +146,11 @@ function SuccessContent() {
         {allTickets.map((ticket, idx) => (
           <div
             key={ticket._id}
-            className="ticket-card w-full max-w-xl shadow-2xl flex"
-            style={{ borderRadius: '20px', overflow: 'hidden' }}
+            className="ticket-card w-full max-w-2xl shadow-2xl flex"
+            style={{ borderRadius: '20px', overflow: 'hidden', height: 460 }}
           >
-            {/* ── Left: Event image — aspect-ratio 3/4 auto-sizes width to match card height ── */}
-            <div
-              className="relative bg-black shrink-0 self-stretch"
-              style={{ aspectRatio: '3/4' }}
-            >
+            {/* ── Left: fixed 345×460 = exact 3:4 ratio → image fills with no black bars ── */}
+            <div className="relative bg-black shrink-0" style={{ width: 345, height: 460 }}>
               <Image
                 src="/smart-gh.jpg"
                 alt="Smart Global Hoops 2026"
