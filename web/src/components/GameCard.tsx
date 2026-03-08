@@ -31,10 +31,10 @@ export default function GameCard({ game }: Props) {
   return (
     <Link
       href={`/tickets/${game._id}`}
-      className="group flex flex-col rounded-2xl overflow-hidden bg-white shadow-sm border border-black/5 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+      className="group flex flex-row rounded-2xl overflow-hidden bg-white shadow-sm border border-black/5 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
     >
-      {/* Banner */}
-      <div className="relative h-36 w-full bg-primary overflow-hidden">
+      {/* Left: portrait image panel */}
+      <div className="relative shrink-0 bg-primary overflow-hidden" style={{ width: 130 }}>
         {game.bannerImage ? (
           <Image
             src={game.bannerImage}
@@ -43,9 +43,8 @@ export default function GameCard({ game }: Props) {
             className="object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
-          /* Stylised placeholder when no banner is uploaded */
-          <div className="absolute inset-0 flex items-center justify-center px-4">
-            <span className="text-white text-sm font-black uppercase tracking-tight leading-tight text-center">
+          <div className="absolute inset-0 flex items-center justify-center px-3">
+            <span className="text-white text-xs font-black uppercase tracking-tight leading-tight text-center">
               {game.description}
             </span>
           </div>
@@ -53,15 +52,15 @@ export default function GameCard({ game }: Props) {
 
         {/* Badge overlay */}
         {badge && (
-          <div className="absolute top-2.5 left-2.5">
+          <div className="absolute top-2 left-2">
             <Badge type={badge} size="sm" />
           </div>
         )}
       </div>
 
-      {/* Body */}
-      <div className="flex flex-col flex-1 p-4 gap-3">
-        {/* Teams */}
+      {/* Right: content */}
+      <div className="flex flex-col flex-1 min-w-0 p-4 gap-3">
+        {/* Date + title + venue */}
         <div>
           <p className="text-xs font-semibold text-primary/60 uppercase tracking-widest mb-0.5">
             {dateStr} · {timeStr}
@@ -72,7 +71,7 @@ export default function GameCard({ game }: Props) {
           <p className="text-sm text-offblack/50 mt-0.5">{game.venue}</p>
         </div>
 
-        {/* Ticket types row */}
+        {/* Ticket type pills */}
         {game.ticketTypes.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-auto pt-1">
             {game.ticketTypes.map((tt) => (
@@ -93,10 +92,7 @@ export default function GameCard({ game }: Props) {
         <div className="flex items-center justify-between pt-1 border-t border-black/5">
           {lowestPrice !== null ? (
             <p className="text-sm text-offblack/60">
-              From{' '}
-              <span className="font-bold text-offblack">
-                ₱{lowestPrice.toLocaleString()}
-              </span>
+              From <span className="font-bold text-offblack">₱{lowestPrice.toLocaleString()}</span>
             </p>
           ) : (
             <p className="text-sm text-offblack/40">No tickets listed</p>

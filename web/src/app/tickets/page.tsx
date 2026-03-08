@@ -33,7 +33,7 @@ export default async function TicketsPage() {
           <p className="text-offblack/25 text-sm mt-1">Check back soon.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl">
           {games.map((game) => (
             <GameCard key={game._id} game={game} />
           ))}
