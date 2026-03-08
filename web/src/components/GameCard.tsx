@@ -34,7 +34,7 @@ export default function GameCard({ game }: Props) {
       className="group flex flex-row rounded-2xl overflow-hidden bg-white shadow-sm border border-black/5 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
     >
       {/* Left: portrait image panel */}
-      <div className="relative shrink-0 bg-primary overflow-hidden" style={{ width: 180 }}>
+      <div className="relative shrink-0 bg-primary overflow-hidden" style={{ width: 150 }}>
         {game.bannerImage ? (
           <Image
             src={game.bannerImage}
