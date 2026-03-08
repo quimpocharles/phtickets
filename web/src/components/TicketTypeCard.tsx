@@ -62,7 +62,7 @@ export default function TicketTypeCard({ ticketType, cartQty, onAdd, onChangeQty
         alignItems:      'center',
         justifyContent:  'center',
         gap:             '1px',
-        zIndex:          10,
+        zIndex:          20,
         filter:          'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
         pointerEvents:   'none',
       }}
