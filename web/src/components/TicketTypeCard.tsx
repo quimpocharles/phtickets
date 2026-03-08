@@ -150,7 +150,7 @@ export default function TicketTypeCard({ ticketType, cartQty, onAdd, onChangeQty
             >
               {cartQty === 1 ? '×' : '−'}
             </button>
-            <span className="text-white font-black text-lg w-6 text-center tabular-nums">{cartQty}</span>
+            <span className="bg-white text-offblack font-black text-lg w-8 h-8 flex items-center justify-center rounded-lg tabular-nums">{cartQty}</span>
             <button
               type="button"
               onClick={() => onChangeQty(cartQty + 1)}
