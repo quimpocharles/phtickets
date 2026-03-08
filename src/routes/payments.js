@@ -5,7 +5,7 @@ const Order = require('../models/Order');
 const TicketType = require('../models/TicketType');
 const TicketReservation = require('../models/TicketReservation');
 const Game = require('../models/Game');
-const { getPaymentStatus } = require('../services/maya');
+const { getPaymentStatus } = require('../services/paymongo');
 const { generateTickets } = require('../utils/generateTickets');
 const { sendTicketEmail } = require('../services/mailer');
 const { sendTicketSMS } = require('../services/sms');
@@ -17,36 +17,51 @@ const Ticket = require('../models/Ticket');
 // ─────────────────────────────────────────────────────────────────────────────
 
 function verifySignature(rawBody, signatureHeader) {
-  const secret = process.env.MAYA_WEBHOOK_SECRET;
+  const secret = process.env.PAYMONGO_WEBHOOK_SECRET;
   if (!secret) return true;        // skip verification in local dev
   if (!signatureHeader) return false;
 
-  const expected = crypto
-    .createHmac('sha512', secret)
-    .update(rawBody)
+  // PayMongo header format: "t=<timestamp>,te=<hmac256_test>,li=<hmac256_live>"
+  const parts = {};
+  signatureHeader.split(',').forEach((part) => {
+    const [k, v] = part.split('=');
+    if (k && v) parts[k.trim()] = v.trim();
+  });
+
+  const timestamp = parts.t;
+  if (!timestamp) return false;
+
+  const computed = crypto
+    .createHmac('sha256', secret)
+    .update(`${timestamp}.${rawBody.toString('utf8')}`)
     .digest('hex');
 
-  try {
-    return crypto.timingSafeEqual(
-      Buffer.from(expected, 'hex'),
-      Buffer.from(signatureHeader, 'hex')
-    );
-  } catch {
-    return false; // buffers differ in length → invalid signature
-  }
+  // te = test-mode hash, li = live-mode hash; try both
+  const candidates = [parts.te, parts.li].filter(Boolean);
+  return candidates.some((candidate) => {
+    try {
+      return crypto.timingSafeEqual(
+        Buffer.from(computed, 'hex'),
+        Buffer.from(candidate, 'hex')
+      );
+    } catch {
+      return false;
+    }
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /payments/webhook
 //
-// Maya echoes requestReferenceNumber = cartId (set during checkout).
+// PayMongo sends checkout_session.payment.paid when a session is paid.
+// reference_number = cartId (set during checkout).
 // Finds all reservations sharing that cartId, creates one Order per reservation,
 // generates tickets, then sends one combined email + SMS.
 // ─────────────────────────────────────────────────────────────────────────────
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
 
   // ── Signature verification ────────────────────────────────────────────────
-  const signature = req.headers['x-signature'];
+  const signature = req.headers['paymongo-signature'];
   if (!verifySignature(req.body, signature)) {
     return res.status(401).json({ success: false, message: 'Invalid webhook signature.' });
   }
@@ -59,9 +74,9 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     return res.status(400).json({ success: false, message: 'Invalid JSON payload.' });
   }
 
-  const cartId = event.requestReferenceNumber;
+  const cartId = event.data?.attributes?.data?.attributes?.reference_number;
   if (!cartId) {
-    return res.status(400).json({ success: false, message: 'Missing requestReferenceNumber.' });
+    return res.status(400).json({ success: false, message: 'Missing reference_number.' });
   }
 
   try {
@@ -86,17 +101,17 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       return res.json({ success: true, message: 'One or more reservations have expired.' });
     }
 
-    // ── Step 3: Cross-verify payment status with Maya ─────────────────────────
+    // ── Step 3: Cross-verify payment status with PayMongo ────────────────────
     const checkoutId = reservations[0].checkoutId;
-    let mayaPayment;
+    let paymongoPayment;
     try {
-      mayaPayment = await getPaymentStatus(checkoutId);
+      paymongoPayment = await getPaymentStatus(checkoutId);
     } catch (err) {
-      console.error('[webhook] Maya verification error:', err.message);
-      return res.status(502).json({ success: false, message: 'Could not verify payment with Maya.' });
+      console.error('[webhook] PayMongo verification error:', err.message);
+      return res.status(502).json({ success: false, message: 'Could not verify payment with PayMongo.' });
     }
 
-    const confirmedStatus = mayaPayment.status;
+    const confirmedStatus = paymongoPayment.status;
 
     // =========================================================================
     //  SUCCESS PATH
@@ -136,7 +151,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
           quantity:         reservation.quantity,
           totalAmount,
           paymentStatus:    'paid',
-          paymentReference: mayaPayment.id ?? checkoutId,
+          paymentReference: paymongoPayment.id ?? checkoutId,
         });
 
         if (!firstOrder) firstOrder = order;
@@ -196,9 +211,9 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     // =========================================================================
     //  FAILURE / EXPIRY PATH
     // =========================================================================
-    if (confirmedStatus === 'PAYMENT_FAILED' || confirmedStatus === 'PAYMENT_EXPIRED') {
+    if (confirmedStatus === 'PAYMENT_EXPIRED' || confirmedStatus === 'PAYMENT_PENDING') {
       await TicketReservation.updateMany({ cartId }, { $set: { status: 'expired' } });
-      return res.json({ success: true, message: 'Payment failed. Reservations released.' });
+      return res.json({ success: true, message: 'Payment not confirmed. Reservations released.' });
     }
 
     return res.json({ success: true, message: `Unhandled payment status: ${confirmedStatus}` });
@@ -266,22 +281,22 @@ router.post('/process/:cartId', async (req, res) => {
       return res.status(400).json({ success: false, message: 'No checkout initiated for this cart.' });
     }
 
-    // Verify with Maya
-    let mayaPaymentId = checkoutId;
+    // Verify with PayMongo
+    let paymentReference = checkoutId;
     try {
-      const mayaPayment = await getPaymentStatus(checkoutId);
-      console.log('[process] Maya status:', mayaPayment.status);
-      if (mayaPayment.status !== 'PAYMENT_SUCCESS') {
-        return res.status(402).json({ success: false, message: `Payment status: ${mayaPayment.status}` });
+      const paymongoPayment = await getPaymentStatus(checkoutId);
+      console.log('[process] PayMongo status:', paymongoPayment.status);
+      if (paymongoPayment.status !== 'PAYMENT_SUCCESS') {
+        return res.status(402).json({ success: false, message: `Payment status: ${paymongoPayment.status}` });
       }
-      mayaPaymentId = mayaPayment.id ?? checkoutId;
+      paymentReference = paymongoPayment.id ?? checkoutId;
     } catch (err) {
-      const errCode = err.response?.data?.code;
-      console.warn('[process] Maya verification failed:', errCode ?? err.message);
+      const errCode = err.response?.data?.errors?.[0]?.code;
+      console.warn('[process] PayMongo verification failed:', errCode ?? err.message);
       if (process.env.NODE_ENV !== 'development') {
-        return res.status(502).json({ success: false, message: 'Could not verify payment with Maya.' });
+        return res.status(502).json({ success: false, message: 'Could not verify payment with PayMongo.' });
       }
-      console.warn('[process] Dev mode — proceeding without Maya verification.');
+      console.warn('[process] Dev mode — proceeding without PayMongo verification.');
     }
 
     // Claim all reservations atomically
@@ -327,7 +342,7 @@ router.post('/process/:cartId', async (req, res) => {
         quantity:         reservation.quantity,
         totalAmount,
         paymentStatus:    'paid',
-        paymentReference: mayaPaymentId,
+        paymentReference,
       });
 
       if (!firstOrder) firstOrder = order;

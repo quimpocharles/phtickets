@@ -14,7 +14,7 @@ const {
   RESERVATION_TTL_SECONDS,
   CHECKOUT_WINDOW_SECONDS,
 } = require('../models/TicketReservation');
-const { createCheckout } = require('../services/maya');
+const { createCheckout } = require('../services/paymongo');
 const { generateOrderNumber } = require('../utils/orderNumber');
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -251,8 +251,8 @@ router.post('/purchase', async (req, res) => {
     });
   } catch (err) {
     await TicketReservation.updateMany({ cartId }, { status: 'expired' });
-    const mayaError = err.response?.data;
-    console.error('[purchase] Maya checkout failed:', mayaError ?? err.message);
+    const pmError = err.response?.data?.errors?.[0];
+    console.error('[purchase] PayMongo checkout failed:', pmError ?? err.message);
     return res.status(502).json({ success: false, message: 'Could not initiate payment. Please try again.' });
   }
 });
