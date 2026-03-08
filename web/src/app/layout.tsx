@@ -3,7 +3,7 @@ import './globals.css';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tickets.globalhoops.com';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.globalhoops.shop';
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
@@ -13,11 +13,14 @@ export const metadata: Metadata = {
     template: '%s | Global Hoops Tickets',
   },
   description:
-    'Buy official Smart Global Hoops International Showcase tickets online. No log-in needed. ' +
-    'Secure checkout powered by Maya. Visa, Mastercard, JCB, Amex & QR Ph accepted.',
+    'Buy official Smart Global Hoops International tickets online. ' +
+    'Mar 16–22, 2026 · Ateneo Blue Eagle Gym. ' +
+    'Showcase, Camps, Prospect Combine & All Star Games. ' +
+    'No log-in needed. Secure checkout. GCash, Maya, Card & QR Ph accepted.',
   keywords: [
-    'Global Hoops', 'Global Hoops tickets', 'Global Hoops International Showcase',
-    'Smart Global Hoops', 'basketball tickets Philippines', 'online ticketing',
+    'Global Hoops', 'Global Hoops tickets', 'Global Hoops International',
+    'Smart Global Hoops', 'basketball tickets Philippines', 'Ateneo Blue Eagle Gym',
+    'Global Hoops 2026', 'basketball showcase Philippines', 'online ticketing',
   ],
   authors: [{ name: 'Global Hoops International' }],
   creator: 'Global Hoops International',
@@ -29,16 +32,17 @@ export const metadata: Metadata = {
     locale: 'en_PH',
     url: APP_URL,
     siteName: 'Global Hoops Tickets',
-    title: 'Global Hoops Tickets — Official Ticket Store',
+    title: 'Smart Global Hoops 2026 — Get Your Tickets Now',
     description:
-      'Buy official Smart Global Hoops International Showcase tickets online. No log-in needed. ' +
-      'Secure checkout powered by Maya.',
+      'Mar 16–22, 2026 · Ateneo Blue Eagle Gym. ' +
+      'Showcase, Camps, Prospect Combine & All Star Games. ' +
+      'Buy tickets online — GCash, Maya, Card & QR Ph accepted.',
     images: [
       {
-        url: '/gh-marquee.png',
-        width: 1200,
-        height: 630,
-        alt: 'Smart x Global Hoops International Showcase — Official Ticket Store',
+        url: '/smart-gh.jpg',
+        width: 4501,
+        height: 6000,
+        alt: 'Smart Global Hoops International 2026 — Official Ticket Store',
       },
     ],
   },
@@ -46,9 +50,10 @@ export const metadata: Metadata = {
   // ── Twitter / X ────────────────────────────────────────────────────────────
   twitter: {
     card: 'summary_large_image',
-    title: 'Global Hoops Tickets — Official Ticket Store',
-    description: 'Buy official Smart Global Hoops International Showcase tickets online. No log-in needed.',
-    images: ['/gh-marquee.png'],
+    title: 'Smart Global Hoops 2026 — Get Your Tickets Now',
+    description:
+      'Mar 16–22, 2026 · Ateneo Blue Eagle Gym. Showcase, Camps, Prospect Combine & All Star Games.',
+    images: ['/smart-gh.jpg'],
   },
 
   // ── Icons ──────────────────────────────────────────────────────────────────
@@ -77,8 +82,8 @@ const orgJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
   name: 'Global Hoops International',
-  url: process.env.NEXT_PUBLIC_APP_URL ?? 'https://tickets.globalhoops.com',
-  logo: `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://tickets.globalhoops.com'}/favico.png`,
+  url: process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.globalhoops.shop',
+  logo: `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.globalhoops.shop'}/favico.png`,
   sameAs: [
     'https://www.facebook.com/profile.php?id=61571452187788',
     'https://www.instagram.com/globalhoopsint',
