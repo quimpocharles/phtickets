@@ -167,11 +167,11 @@ function SuccessContent() {
           <div key={ticket._id} className="flex flex-col items-center gap-3 w-full max-w-2xl">
           <div
             ref={(el) => { ticketRefs.current[ticket.ticketId] = el; }}
-            className="ticket-card w-full shadow-2xl flex"
-            style={{ borderRadius: '20px', overflow: 'hidden', height: 460 }}
+            className="ticket-card w-full shadow-2xl flex flex-row"
+            style={{ borderRadius: '20px', overflow: 'hidden' }}
           >
-            {/* ── Left: fixed 345×460 = exact 3:4 ratio → image fills with no black bars ── */}
-            <div className="relative bg-black shrink-0" style={{ width: 345, height: 460 }}>
+            {/* ── Image: 120px on mobile, 220px on desktop ── */}
+            <div className="relative bg-black shrink-0 w-[120px] sm:w-[220px] self-stretch">
               <Image
                 src="/smart-gh.jpg"
                 alt="Smart Global Hoops 2026"
