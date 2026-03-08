@@ -3,7 +3,11 @@ const path     = require('path');
 const { Resend } = require('resend');
 const { cloudinary } = require('./cloudinary');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend = null;
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+}
 
 // Upload event banner to Cloudinary once; cached in-process
 let _bannerUrl = null;
@@ -188,7 +192,7 @@ async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) 
 
   console.log('[mailer] Sending ticket email to:', to, '| from:', from);
 
-  const { error } = await resend.emails.send({
+  const { error } = await getResend().emails.send({
     from,
     to,
     subject: `Your Global Hoops Tickets – Order ${allTickets[0]?.orderNumber ?? ''}`,
