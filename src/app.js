@@ -10,6 +10,9 @@ const paymentsRouter = require('./routes/payments');
 
 const app = express();
 
+// Trust the first proxy (required on Render / any reverse-proxy host)
+app.set('trust proxy', 1);
+
 // ── Security headers (helmet) ─────────────────────────────────────────────────
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }, // allow Cloudinary images
