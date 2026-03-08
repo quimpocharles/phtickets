@@ -16,9 +16,17 @@ app.use(helmet({
 }));
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
-// In production set ALLOWED_ORIGIN to your frontend domain.
-const allowedOrigin = process.env.ALLOWED_ORIGIN || '*';
-app.use(cors({ origin: allowedOrigin }));
+// ALLOWED_ORIGIN can be a comma-separated list of origins, or * for all.
+const rawOrigin = process.env.ALLOWED_ORIGIN || '*';
+const allowedOrigins = rawOrigin === '*' ? '*' : rawOrigin.split(',').map((o) => o.trim());
+app.use(cors({
+  origin: allowedOrigins === '*'
+    ? '*'
+    : (origin, cb) => {
+        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+        cb(new Error(`CORS: origin ${origin} not allowed`));
+      },
+}));
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 const purchaseLimit = rateLimit({
