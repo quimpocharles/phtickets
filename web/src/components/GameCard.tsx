@@ -34,25 +34,17 @@ export default function GameCard({ game }: Props) {
       className="group flex flex-row rounded-2xl overflow-hidden bg-white shadow-sm border border-black/5 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
     >
       {/* Left: portrait image panel */}
-      <div className="relative shrink-0 bg-primary overflow-hidden" style={{ width: 150 }}>
-        {game.bannerImage ? (
-          <Image
-            src={game.bannerImage}
-            alt={game.description}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center px-3">
-            <span className="text-white text-xs font-black uppercase tracking-tight leading-tight text-center">
-              {game.description}
-            </span>
-          </div>
-        )}
+      <div className="relative shrink-0 bg-black overflow-hidden" style={{ width: 150 }}>
+        <Image
+          src="/smart-gh.jpg"
+          alt="Smart Global Hoops 2026"
+          fill
+          className="object-contain group-hover:scale-105 transition-transform duration-300"
+        />
 
         {/* Badge overlay */}
         {badge && (
-          <div className="absolute top-2 left-2">
+          <div className="absolute top-2 left-2 z-10">
             <Badge type={badge} size="sm" />
           </div>
         )}
