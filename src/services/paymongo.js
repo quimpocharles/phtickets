@@ -39,7 +39,7 @@ async function createCheckout({ referenceNumber, totalAmount, description, buyer
         cancel_url:       `${process.env.APP_BASE_URL}/payments/cancel?ref=${referenceNumber}`,
         reference_number:     referenceNumber,
         statement_descriptor: 'Global Hoops Intl',
-        send_email_receipt:   false,
+        send_email_receipt:   true,
         show_description:     true,
         show_line_items:      true,
       },
