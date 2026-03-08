@@ -57,14 +57,14 @@ middleware/adminAuth.js  JWT verification for /admin routes
 
 ### Payment flow (critical path)
 
-1. **`POST /tickets/purchase`** — accepts `{ items: [{ ticketTypeId, quantity }], buyerEmail, buyerPhone, buyerName, country }`. Generates a `cartId` (UUID), runs a MongoDB transaction to check availability and create all `TicketReservation` docs (shared `cartId`, TTL=5min), calls Maya `createCheckout` with `cartId` as `requestReferenceNumber`, extends TTL to 30min, returns `{ cartId, checkoutUrl }`.
-2. **`POST /payments/webhook`** — `requestReferenceNumber` = `cartId`. HMAC-SHA512 verify → cross-verify with Maya API → `TicketReservation.updateMany({ cartId })` to claim all → one `Order` per reservation → `TicketType.sold += qty` → `generateTickets` → one combined email + SMS (non-blocking).
-3. **`POST /payments/process/:cartId`** — client-triggered fallback for local dev when webhooks can't reach localhost. Skips Maya API verification only when `NODE_ENV=development`. Returns same shape as `GET /tickets/order/cart/:cartId`.
+1. **`POST /tickets/purchase`** — accepts `{ items: [{ ticketTypeId, quantity }], buyerEmail, buyerPhone, buyerName, country }`. Generates a `cartId` (UUID), runs a MongoDB transaction to check availability and create all `TicketReservation` docs (shared `cartId`, TTL=5min), calls PayMongo `createCheckout` with `cartId` as `reference_number`, extends TTL to 30min, returns `{ cartId, checkoutUrl }`.
+2. **`POST /payments/webhook`** — `reference_number` = `cartId`. HMAC-SHA256 verify (`paymongo-signature` header) → cross-verify with PayMongo API → `TicketReservation.updateMany({ cartId })` to claim all → one `Order` per reservation → `TicketType.sold += qty` → `generateTickets` → one combined email + SMS (non-blocking).
+3. **`POST /payments/process/:cartId`** — client-triggered fallback for local dev when webhooks can't reach localhost. Skips PayMongo API verification only when `NODE_ENV=development`. Returns same shape as `GET /tickets/order/cart/:cartId`.
 4. **`GET /tickets/order/cart/:cartId`** — polled by the success page every 5s; returns `{ game, buyer, grandTotal, orders: [{ orderNumber, ticketTypeName, tickets }] }`. Triggers `/process` after 3 failed polls.
 
 ### Multi-cart purchase
 
-A single checkout can contain multiple ticket types (e.g. 4× Single Day + 2× VIP). All reservations share one `cartId` stored on each `TicketReservation`. The Maya checkout total = sum of `(price + serviceFee) × quantity` across all items. On success, one `Order` is created per ticket type.
+A single checkout can contain multiple ticket types (e.g. 4× Single Day + 2× VIP). All reservations share one `cartId` stored on each `TicketReservation`. The PayMongo checkout total = sum of `(price + serviceFee) × quantity` across all items (in centavos = PHP × 100). On success, one `Order` is created per ticket type.
 
 **Mongoose 8 note:** `Model.create([...], { session, ordered: true })` — `ordered: true` is required when using a session with multiple documents.
 
@@ -84,10 +84,8 @@ A single checkout can contain multiple ticket types (e.g. 4× Single Day + 2× V
 |-----|---------|
 | `MONGODB_URI` | MongoDB Atlas connection string |
 | `ALLOWED_ORIGIN` | CORS origin (default `*`) |
-| `MAYA_BASE_URL` | `https://pg-sandbox.paymaya.com` or `https://pg.maya.ph` |
-| `MAYA_PUBLIC_KEY` | Maya checkout key |
-| `MAYA_SECRET_KEY` | Maya payment status key |
-| `MAYA_WEBHOOK_SECRET` | HMAC-SHA512 secret (optional in dev) |
+| `PAYMONGO_SECRET_KEY` | PayMongo secret key (Basic auth, amounts in centavos) |
+| `PAYMONGO_WEBHOOK_SECRET` | HMAC-SHA256 webhook secret (`paymongo-signature` header, optional in dev) |
 | `CLOUDINARY_*` | Cloud name, API key, API secret |
 | `SMTP_HOST/PORT/USER/PASS` | MXrouting SMTP (fusion.mxrouting.net:587) |
 | `EMAIL_FROM` | Must match `SMTP_USER` |
@@ -102,7 +100,7 @@ A single checkout can contain multiple ticket types (e.g. 4× Single Day + 2× V
 | `tickets/` | Public game listing + game detail + purchase panel |
 | `tickets/find/` | "Find My Tickets" — email + phone lookup |
 | `payments/success/` | Polls `GET /tickets/order/cart/:cartId`; shows ticket cards + QR per ticket |
-| `payments/failure/` `payments/cancel/` | Maya redirect pages |
+| `payments/failure/` `payments/cancel/` | PayMongo redirect pages |
 | `scanner/` | Guard QR scanner — ZXing camera, calls `GET /tickets/verify/:ticketId`, full-screen PWA |
 | `admin/` | Dashboard, orders, games CRUD, reports |
 

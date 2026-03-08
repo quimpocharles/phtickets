@@ -1,17 +1,28 @@
 const fs         = require('fs');
 const path       = require('path');
 const nodemailer = require('nodemailer');
-const QRCode     = require('qrcode');
+const { cloudinary } = require('./cloudinary');
 
-// Load event banner once at startup; gracefully falls back to empty string
-const bannerDataUri = (() => {
+// Upload event banner to Cloudinary once; cached in-process
+let _bannerUrl = null;
+async function getBannerUrl() {
+  if (_bannerUrl) return _bannerUrl;
+  const bannerPath = path.join(__dirname, '../../web/public/smart-gh.jpg');
+  if (!fs.existsSync(bannerPath)) return '';
   try {
-    const buf = fs.readFileSync(path.join(__dirname, '../../web/public/smart-gh.jpg'));
-    return `data:image/jpeg;base64,${buf.toString('base64')}`;
-  } catch {
-    return '';
+    const result = await cloudinary.uploader.upload(bannerPath, {
+      folder:        'ticket-sys/banners',
+      public_id:     'smart-gh-2026-email',
+      overwrite:     false,
+      resource_type: 'image',
+    });
+    _bannerUrl = result.secure_url;
+  } catch (err) {
+    console.error('[mailer] Banner upload failed:', err.message);
+    _bannerUrl = '';
   }
-})();
+  return _bannerUrl;
+}
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -36,15 +47,13 @@ async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) 
   const dateStr  = gameDate.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' });
   const timeStr  = gameDate.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila' });
 
-  // Build one ticket card per ticket, QR embedded as base64
+  const bannerUrl = await getBannerUrl();
+
+  // Build one ticket card per ticket; QR served from Cloudinary URL
   const ticketCards = (
     await Promise.all(
       allTickets.map(async (t, idx) => {
-        const qrDataUri = await QRCode.toDataURL(t.ticketId, {
-          errorCorrectionLevel: 'H',
-          width: 280,
-          margin: 2,
-        });
+        const qrUrl    = t.qrCodeUrl || '';
         const scopeLabel = t.ticketTypeScope === 'all' ? 'All Events Pass' : 'Single Day Pass';
         return `
         <!-- Ticket ${idx + 1} -->
@@ -53,8 +62,8 @@ async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) 
 
             <!-- Left: event image — sized to fill the full card height (3:4 ratio) -->
             <td width="356" style="width:356px;min-width:356px;background:#111827;vertical-align:top;padding:0;">
-              ${bannerDataUri
-                ? `<img src="${bannerDataUri}" width="356" height="475" style="display:block;width:356px;height:475px;" alt="Smart Global Hoops 2026" />`
+              ${bannerUrl
+                ? `<img src="${bannerUrl}" width="356" height="475" style="display:block;width:356px;height:475px;" alt="Smart Global Hoops 2026" />`
                 : `<div style="width:356px;height:475px;background:#111827;display:table-cell;vertical-align:middle;text-align:center;">
                      <p style="margin:0;color:#fed000;font-size:13px;font-weight:900;letter-spacing:0.05em;line-height:1.4;">SMART<br>GLOBAL<br>HOOPS<br>2026</p>
                    </div>`
@@ -130,7 +139,7 @@ async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) 
                 <tr>
                   <td style="background:#ffffff;padding:12px 16px 16px;text-align:center;">
                     <div style="display:inline-block;padding:8px;border:2px solid #f3f4f6;border-radius:12px;background:#ffffff;">
-                      <img src="${qrDataUri}" alt="QR code – ${t.ticketId}" width="160" height="160" style="display:block;" />
+                      ${qrUrl ? `<img src="${qrUrl}" alt="QR code – ${t.ticketId}" width="160" height="160" style="display:block;" />` : `<div style="width:160px;height:160px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;"><p style="margin:0;font-size:10px;color:#9ca3af;">${t.ticketId}</p></div>`}
                     </div>
                     <p style="margin:8px 0 2px;font-family:monospace;font-size:10px;color:#9ca3af;letter-spacing:0.08em;">${t.ticketId}</p>
                     <p style="margin:0;font-size:10px;font-weight:600;color:#6b7280;">Present at venue entrance</p>
