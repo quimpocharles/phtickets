@@ -63,7 +63,8 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   // ── Signature verification ────────────────────────────────────────────────
   const signature = req.headers['paymongo-signature'];
   if (!verifySignature(req.body, signature)) {
-    return res.status(401).json({ success: false, message: 'Invalid webhook signature.' });
+    console.warn('[webhook] Invalid signature — ignoring.');
+    return res.json({ success: false, message: 'Invalid webhook signature.' });
   }
 
   // ── Parse body ────────────────────────────────────────────────────────────
@@ -108,7 +109,8 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       paymongoPayment = await getPaymentStatus(checkoutId);
     } catch (err) {
       console.error('[webhook] PayMongo verification error:', err.message);
-      return res.status(502).json({ success: false, message: 'Could not verify payment with PayMongo.' });
+      // Return 200 so PayMongo does not disable the webhook — we log for manual follow-up
+      return res.json({ success: false, message: 'Could not verify payment with PayMongo.' });
     }
 
     const confirmedStatus = paymongoPayment.status;
@@ -171,7 +173,8 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
           });
         } catch (err) {
           console.error('[webhook] Ticket generation failed for reservation:', reservation._id, err.message);
-          return res.status(500).json({
+          // Return 200 so PayMongo doesn't disable the webhook; payment is already recorded
+          return res.json({
             success: false,
             message: 'Payment recorded but ticket generation failed. Will retry.',
           });
