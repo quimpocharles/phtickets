@@ -72,12 +72,14 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   try {
     event = JSON.parse(req.body.toString('utf8'));
   } catch {
-    return res.status(400).json({ success: false, message: 'Invalid JSON payload.' });
+    console.warn('[webhook] Invalid JSON payload — ignoring.');
+    return res.json({ success: false, message: 'Invalid JSON payload.' });
   }
 
   const cartId = event.data?.attributes?.data?.attributes?.reference_number;
   if (!cartId) {
-    return res.status(400).json({ success: false, message: 'Missing reference_number.' });
+    console.warn('[webhook] Missing reference_number — ignoring.');
+    return res.json({ success: false, message: 'Missing reference_number.' });
   }
 
   try {
@@ -223,7 +225,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 
   } catch (err) {
     console.error('[webhook]', err);
-    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
+    return res.json({ success: false, message: 'An unexpected error occurred.' });
   }
 });
 

@@ -48,7 +48,11 @@ const findLimit = rateLimit({
   message: { success: false, message: 'Too many lookup requests. Please try again later.' },
 });
 
-app.use(express.json());
+// Apply express.json() everywhere EXCEPT the webhook route (which needs raw body for HMAC)
+app.use((req, res, next) => {
+  if (req.path === '/payments/webhook') return next();
+  express.json()(req, res, next);
+});
 
 // Apply rate limits before route handlers
 app.use('/tickets/purchase', purchaseLimit);
