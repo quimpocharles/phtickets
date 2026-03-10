@@ -12,7 +12,8 @@ const adminAuth = require('../middleware/adminAuth');
 const { requireSuperAdmin, requireAdmin } = require('../middleware/roles');
 const { generateGateReconciliationReport } = require('../services/gateReconciliationService');
 const ScanLog = require('../models/ScanLog');
-const Order = require('../models/Order');
+const Order  = require('../models/Order');
+const Ticket = require('../models/Ticket');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /admin/setup-status  (public)
@@ -691,6 +692,52 @@ router.delete('/games/:gameId', requireSuperAdmin, async (req, res) => {
 // GET /admin/orders
 // List all paid orders, newest first. Supports ?gameId= filter.
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /admin/orders/search?q=
+// Search paid orders by buyer name or email; returns orders + their tickets.
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/orders/search', async (req, res) => {
+  const q = (req.query.q ?? '').trim();
+  if (q.length < 2) {
+    return res.status(400).json({ success: false, message: 'Query must be at least 2 characters.' });
+  }
+
+  try {
+    const regex  = new RegExp(q, 'i');
+    const orders = await Order.find({
+      paymentStatus: 'paid',
+      $or: [{ buyerEmail: regex }, { buyerName: regex }],
+    })
+      .populate('gameId',      'description venue gameDate')
+      .populate('ticketTypeId', 'name scope price')
+      .sort({ createdAt: -1 })
+      .limit(100);
+
+    if (!orders.length) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const orderIds = orders.map((o) => o._id);
+    const tickets  = await Ticket.find({ orderId: { $in: orderIds } }).sort({ createdAt: 1 });
+
+    const ticketsByOrder = new Map();
+    for (const t of tickets) {
+      const key = t.orderId.toString();
+      if (!ticketsByOrder.has(key)) ticketsByOrder.set(key, []);
+      ticketsByOrder.get(key).push(t);
+    }
+
+    const data = orders.map((o) => ({
+      order:   o,
+      tickets: ticketsByOrder.get(o._id.toString()) ?? [],
+    }));
+
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
+  }
+});
+
 router.get('/orders', async (req, res) => {
   try {
     const filter = { paymentStatus: 'paid' };
