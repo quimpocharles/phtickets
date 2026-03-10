@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
+import PublicShell from '@/components/PublicShell';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.globalhoops.shop';
 
@@ -98,9 +97,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
         />
-        <Navbar />
-        <main className="min-h-screen">{children}</main>
-        <Footer />
+        <PublicShell>{children}</PublicShell>
       </body>
     </html>
   );
