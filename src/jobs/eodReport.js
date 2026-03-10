@@ -1,20 +1,16 @@
 const cron = require('node-cron');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const { generateDailyTransactionReport } = require('../services/reportService');
 const { eodReportTemplate } = require('../templates/eodReportTemplate');
 const ReportRecipient = require('../models/ReportRecipient');
 
 // ── Mailer ────────────────────────────────────────────────────────────────────
 
-const transporter = nodemailer.createTransport({
-  host:   process.env.SMTP_HOST,
-  port:   Number(process.env.SMTP_PORT) || 587,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+let _resend = null;
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+}
 
 // ── CSV builder ───────────────────────────────────────────────────────────────
 
@@ -82,17 +78,25 @@ async function generateAndSendReport() {
   const csvContent  = buildTransactionsCsv(report.orders);
   const csvFilename = `transactions-${new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })}.csv`;
 
-  await transporter.sendMail({
-    ...template,
-    to: recipients.join(', '),
+  const from = process.env.EMAIL_FROM
+    ? `Global Hoops Tickets <${process.env.EMAIL_FROM}>`
+    : template.from;
+
+  const { error } = await getResend().emails.send({
+    from,
+    to:      recipients,
+    subject: template.subject,
+    html:    template.html,
+    text:    template.text,
     attachments: [
       {
-        filename:    csvFilename,
-        content:     csvContent,
-        contentType: 'text/csv; charset=utf-8',
+        filename: csvFilename,
+        content:  Buffer.from(csvContent).toString('base64'),
       },
     ],
   });
+
+  if (error) throw new Error(error.message);
 
   console.log(
     `[eod-report] Sent from ${template.from} to ${recipients.join(', ')} — ` +
