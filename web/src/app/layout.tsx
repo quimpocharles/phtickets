@@ -57,8 +57,8 @@ export const metadata: Metadata = {
 
   // ── Icons ──────────────────────────────────────────────────────────────────
   icons: {
-    icon: '/favico.png',
-    apple: '/favico.png',
+    icon: '/icon-192.png',
+    apple: '/icon-192.png',
   },
 
   // ── PWA manifest ───────────────────────────────────────────────────────────
