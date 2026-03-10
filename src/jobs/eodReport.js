@@ -31,6 +31,7 @@ function buildTransactionsCsv(orders) {
     'Total Amount',
     'Buyer Email',
     'Buyer Phone',
+    'Country',
     'Payment Reference',
     'Transaction Date',
   ];
@@ -50,6 +51,7 @@ function buildTransactionsCsv(orders) {
       o.totalAmount,
       o.buyerEmail,
       o.buyerPhone,
+      o.country ?? '',
       o.paymentReference ?? '',
       txDate,
     ].map(escapeCsv).join(',');
