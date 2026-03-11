@@ -49,7 +49,7 @@ export default function FindTicketPage() {
       const json = await res.json();
 
       if (!res.ok) {
-        setError(json.message ?? 'No tickets found.');
+        setError(json.message ?? 'No passes found.');
         return;
       }
       setResults(json.data);
@@ -67,7 +67,7 @@ export default function FindTicketPage() {
 
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-black text-gray-900">Find My Tickets</h1>
+          <h1 className="text-2xl font-black text-gray-900">Find My Passes</h1>
           <p className="text-gray-500 text-sm mt-1">
             Enter the email and phone number you used when purchasing.
           </p>
@@ -118,7 +118,7 @@ export default function FindTicketPage() {
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 Searching…
               </>
-            ) : 'Find My Tickets'}
+            ) : 'Find My Passes'}
           </button>
         </form>
 
@@ -149,7 +149,7 @@ export default function FindTicketPage() {
                       <p className="text-xs text-gray-400 mt-0.5">{dateStr} · {game.venue}</p>
                       <div className="flex items-center gap-3 mt-1.5">
                         <span className="text-xs font-mono text-gray-500">{order.orderNumber}</span>
-                        <span className="text-xs text-gray-400">{tickets.length} ticket{tickets.length !== 1 ? 's' : ''}</span>
+                        <span className="text-xs text-gray-400">{tickets.length} pass{tickets.length !== 1 ? 'es' : ''}</span>
                         <span className="text-xs font-bold text-gray-900">₱{order.totalAmount.toLocaleString()}</span>
                       </div>
                     </div>
@@ -169,7 +169,7 @@ export default function FindTicketPage() {
                           {/* Details */}
                           <div className="w-full flex justify-between items-start text-sm">
                             <div className="flex flex-col gap-0.5">
-                              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Ticket Type</p>
+                              <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Pass Type</p>
                               <p className="font-semibold text-gray-900">{order.ticketTypeId.name}</p>
                             </div>
                             <div className="flex flex-col gap-0.5 items-end">
@@ -212,7 +212,7 @@ export default function FindTicketPage() {
         )}
 
         <p className="text-center text-xs text-gray-400 mt-8">
-          Can&apos;t find your tickets?{' '}
+          Can&apos;t find your passes?{' '}
           <a href="/" className="text-gray-600 hover:underline">Browse upcoming games</a>
         </p>
       </div>

@@ -154,13 +154,13 @@ export default async function GameDetailPage({ params }: Props) {
           <div className="flex-1 flex flex-col justify-between pt-20 overflow-hidden">
             <div className="py-7 px-6 sm:px-10">
               <p className="text-accent font-black uppercase tracking-widest text-xs sm:text-sm mb-2">
-                Global Hoops International Tickets
+                Global Hoops International Passes
               </p>
               <h1 className="text-white font-black uppercase text-2xl sm:text-4xl leading-tight mb-2 max-w-2xl">
                 {game.description}
               </h1>
               <p className="text-white/50 text-sm">
-                Get your tickets in 5 easy steps &mdash; no log-in needed.
+                Get your passes in 5 easy steps &mdash; no log-in needed.
               </p>
             </div>
 

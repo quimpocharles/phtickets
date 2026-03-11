@@ -1,4 +1,4 @@
-# Global Hoops Tickets — System Documentation
+# Global Hoops — System Documentation
 
 > Visual guide for customers and admins. Add screenshots at each `[SCREENSHOT]` marker.
 
@@ -6,23 +6,23 @@
 
 ## Table of Contents
 
-1. [Customer Flow — How to Buy Tickets](#1-customer-flow--how-to-buy-tickets)
+1. [Customer Flow — How to Buy Passes](#1-customer-flow--how-to-buy-passes)
 2. [What Customers Receive](#2-what-customers-receive)
-3. [Find My Tickets](#3-find-my-tickets)
+3. [Find My Passes](#3-find-my-passes)
 4. [At the Venue — Gate Entry](#4-at-the-venue--gate-entry)
 5. [Admin — Dashboard](#5-admin--dashboard)
 6. [Admin — Managing Games](#6-admin--managing-games)
-7. [Admin — Managing Ticket Types](#7-admin--managing-ticket-types)
+7. [Admin — Managing Pass Types](#7-admin--managing-pass-types)
 8. [Admin — Orders](#8-admin--orders)
 9. [Admin — Reports](#9-admin--reports)
 
 ---
 
-## 1. Customer Flow — How to Buy Tickets
+## 1. Customer Flow — How to Buy Passes
 
 ### Step 1 — Browse Upcoming Games
 
-The homepage lists all available games. Each game card shows the event name, venue, date, and a link to buy tickets.
+The homepage lists all available games. Each game card shows the event name, venue, date, and a link to buy passes.
 
 `[SCREENSHOT: Games listing page — /tickets]`
 
@@ -30,24 +30,24 @@ The homepage lists all available games. Each game card shows the event name, ven
 
 ### Step 2 — Select a Game
 
-Clicking a game opens the game detail page. The banner shows the event name, venue, and date in a scrolling marquee. Below it is the ticket purchase panel.
+Clicking a game opens the game detail page. The banner shows the event name, venue, and date in a scrolling marquee. Below it is the pass purchase panel.
 
-`[SCREENSHOT: Game detail page with banner and ticket panel — /tickets/[gameId]]`
+`[SCREENSHOT: Game detail page with banner and pass panel — /tickets/[gameId]]`
 
 ---
 
-### Step 3 — Choose Ticket Types and Quantities
+### Step 3 — Choose Pass Types and Quantities
 
-Each available ticket type is shown as a card with its name, price, service fee, and remaining availability. Urgency badges (e.g. "Almost Sold Out") appear automatically based on stock levels.
+Each available pass type is shown as a card with its name, price, service fee, and remaining availability. Urgency badges (e.g. "Almost Sold Out") appear automatically based on stock levels.
 
-- Tap a ticket type card to add it to the cart.
+- Tap a pass type card to add it to the cart.
 - Once added, a quantity stepper appears — use **+** and **−** to adjust.
-- Multiple ticket types can be added in one checkout (e.g. 2× Single Day + 1× VIP).
-- The grand total (tickets + web service fees) updates live at the bottom.
+- Multiple pass types can be added in one checkout (e.g. 2× Single Day + 1× VIP).
+- The grand total (passes + web service fees) updates live at the bottom.
 
-`[SCREENSHOT: Ticket type cards — one unselected (button style), one selected (stepper style)]`
+`[SCREENSHOT: Pass type cards — one unselected (button style), one selected (stepper style)]`
 
-`[SCREENSHOT: Cart summary showing multiple ticket types and grand total]`
+`[SCREENSHOT: Cart summary showing multiple pass types and grand total]`
 
 ---
 
@@ -55,7 +55,7 @@ Each available ticket type is shown as a card with its name, price, service fee,
 
 Fill in:
 - **Full Name**
-- **Email Address** — tickets and QR codes will be sent here
+- **Email Address** — passes and QR codes will be sent here
 - **Mobile Number** — an SMS confirmation is sent here
 - **Country** — used for team commission tracking (10 options: PH, US, AU, CA, NZ, IT, EU, GB, AE, MT)
 
@@ -91,37 +91,39 @@ After completing payment, the customer is redirected back to the site. A loading
 
 ## 2. What Customers Receive
 
-### On-Screen — Ticket Cards
+### On-Screen — Pass Cards
 
-Once confirmed, each ticket appears as a digital card showing:
+Once confirmed, each pass appears as a digital card showing:
 
 | Field | Example |
 |-------|---------|
-| Ticket Type | Single Day Pass |
+| Pass Type | Single Day Pass |
 | Validity | Single Day Pass / All Events Pass |
-| Ticket # | 1 / 3 |
+| Pass # | 1 / 3 |
 | Date & Time | March 15, 2026, 10:00 AM |
 | Total Paid | ₱1,500 |
-| Ticket No. | GH26-000042 |
+| Pass No. | GH26-000042 |
 | Venue | Ynares Center Antipolo |
-| Ticket Holder | Juan dela Cruz |
-| QR Code | Unique per ticket |
+| Pass Holder | Juan dela Cruz |
+| QR Code | Unique per pass |
 
-`[SCREENSHOT: Full ticket card on success page]`
+`[SCREENSHOT: Full pass card on success page]`
 
 Customers can:
-- **Download Ticket** — saves the card as a PNG image (yellow button below each ticket)
-- **Save / Print** — exports all tickets to print or save as PDF
+- **Download Pass** — saves the card as a PNG image (yellow button below each pass)
+- **Save / Print** — exports all passes to print or save as PDF
 
 `[SCREENSHOT: Download and Save/Print buttons]`
 
 ---
 
-### By Email — Ticket Confirmation
+### By Email — Pass Confirmation
 
-A confirmation email is sent to the buyer's email address containing all purchased tickets in a single email. Each ticket includes the event banner, ticket details, and a QR code image.
+A confirmation email is sent to the buyer's email address containing all purchased passes in a single email. Each pass includes the event banner, pass details, and a QR code image.
 
-`[SCREENSHOT: Email ticket layout — horizontal card with banner on left, details + QR on right]`
+**Subject:** `Your Global Hoops Passes – Order ORD-YYYYMMDD-XXXXX`
+
+`[SCREENSHOT: Email pass layout — horizontal card with banner on left, details + QR on right]`
 
 ---
 
@@ -133,20 +135,20 @@ A short SMS is sent to the buyer's mobile number with the order number and event
 
 ---
 
-## 3. Find My Tickets
+## 3. Find My Passes
 
-Customers who lost or didn't save their tickets can retrieve them at:
+Customers who lost or didn't save their passes can retrieve them at:
 
 **`/tickets/find`**
 
-Enter the **email address** and **phone number** used at checkout. All matching orders are returned, showing each ticket's QR code and status.
+Enter the **email address** and **phone number** used at checkout. All matching orders are returned, showing each pass's QR code and status.
 
-- If a ticket shows **"✓ Already scanned"**, it has been used at the gate.
+- If a pass shows **"✓ Already scanned"**, it has been used at the gate.
 - Rate limited to 10 lookups per 5 minutes per IP.
 
-`[SCREENSHOT: Find My Tickets form]`
+`[SCREENSHOT: Find My Passes form]`
 
-`[SCREENSHOT: Find My Tickets results — expanded order showing QR codes]`
+`[SCREENSHOT: Find My Passes results — expanded order showing QR codes]`
 
 ---
 
@@ -158,18 +160,19 @@ Guards use the Scanner app at **`/scanner`** — a full-screen PWA optimized for
 
 1. The guard opens the scanner on their phone/tablet.
 2. The camera activates automatically and continuously scans for QR codes.
-3. The customer presents their QR code (from email, download, or Find My Tickets).
-4. The scanner reads the QR and checks the ticket against the database.
+3. The customer presents their QR code (from email, download, or Find My Passes).
+4. The scanner reads the QR and checks the pass against the database.
+5. Guard can also enter a pass ID manually (e.g. `GH26-000001`) if the camera can't read the QR.
 
 ### Scan results
 
 | Result | Meaning |
 |--------|---------|
-| **Valid — Admitted** (green) | Ticket is active and has not been used. Entry granted. |
-| **Already Used** (red) | Ticket was previously scanned. Deny entry. |
-| **Invalid** (red) | QR code not found in the system. Deny entry. |
+| **Valid — Entry Granted** (green) | Pass is active and has not been used. Entry granted. |
+| **Already Used** (amber) | Pass was previously scanned. Deny entry. |
+| **Pass not recognised** (red) | QR code not found in the system. Deny entry. |
 
-**Ticket type behavior:**
+**Pass type behavior:**
 - **Single Day Pass** — marked as used on first scan. Will show "Already Used" on any subsequent scan.
 - **VIP All Events Pass** — valid every day of the event. Each day registers a separate scan log. Cannot be reused on the same day.
 
@@ -193,7 +196,7 @@ The dashboard shows a live summary of all games:
 | Card | Description |
 |------|-------------|
 | Total Revenue | Sum of all paid orders across all games |
-| Tickets Sold | Total tickets issued across all games |
+| Passes Sold | Total passes issued across all games |
 | Upcoming Games | Games whose end date is in the future |
 | Trending Games | Upcoming games where ≥10% of capacity is sold |
 
@@ -205,10 +208,10 @@ Lists every game with:
 - Game name + "Upcoming" badge if still active
 - Date range
 - Venue
-- Tickets sold (with visual fill bar — green → yellow → red as it fills up)
-- Tickets remaining (turns red when sold out)
+- Passes sold (with visual fill bar — green → yellow → red as it fills up)
+- Passes remaining (turns red when sold out)
 - Revenue
-- Actions: **Edit**, **Delete**, **Manage Tickets**
+- Actions: **Edit**, **Delete**, **Manage Passes**
 
 `[SCREENSHOT: Admin dashboard games table]`
 
@@ -227,7 +230,7 @@ Fields:
 - **Venue**
 - **Start Date & Time**
 - **End Date & Time** (can span multiple days for multi-day events)
-- **Banner Image** — uploaded image shown on the ticket and game detail page
+- **Banner Image** — uploaded image shown on the pass and game detail page
 
 `[SCREENSHOT: New game form]`
 
@@ -243,47 +246,47 @@ Same fields as creation. Changes apply immediately to the public listing.
 
 Triggered from the dashboard table. A confirmation prompt appears before deletion.
 
-> Note: Deleting a game does not refund payments. Only delete games with no sold tickets.
+> Note: Deleting a game does not refund payments. Only delete games with no sold passes.
 
 `[SCREENSHOT: Delete confirmation prompt]`
 
 ---
 
-## 7. Admin — Managing Ticket Types
+## 7. Admin — Managing Pass Types
 
 **URL:** `/admin/games/[gameId]/tickets`
 
-Each game can have multiple ticket types (e.g. Single Day, Family Pass, VIP).
+Each game can have multiple pass types (e.g. Single Day, Family Pass, VIP).
 
-### Ticket Type Fields
+### Pass Type Fields
 
 | Field | Description |
 |-------|-------------|
 | **Name** | Display name (e.g. "Single Day Pass"). Preset suggestions are available. |
 | **Validity** | **Single Day** — valid for one day only. **All Events (VIP)** — valid for every day of the event. |
-| **Price (₱)** | Base ticket price charged to the buyer. |
+| **Price (₱)** | Base pass price charged to the buyer. |
 | **Service Fee (₱)** | Web service fee added on top of the price (set 0 if none). |
-| **Capacity** | Maximum number of tickets that can be sold. |
+| **Capacity** | Maximum number of passes that can be sold. |
 | **QRs / Purchase** | Number of individual QR codes generated per 1 purchase unit. Set to **5** for family passes. |
 
-`[SCREENSHOT: Ticket type table showing existing types with sold count and capacity]`
+`[SCREENSHOT: Pass type table showing existing types with sold count and capacity]`
 
-`[SCREENSHOT: Add ticket types form — multiple rows]`
+`[SCREENSHOT: Add pass types form — multiple rows]`
 
 ### Adding Multiple Types at Once
 
-Click **+ Add another type** to add a second (or more) ticket type row before saving. All rows are submitted together in one action.
+Click **+ Add another type** to add a second (or more) pass type row before saving. All rows are submitted together in one action.
 
-### Editing a Ticket Type
+### Editing a Pass Type
 
-Click **Edit** on any active ticket type row to open an inline edit panel below the table. Make changes and click **Save Changes**.
+Click **Edit** on any active pass type row to open an inline edit panel below the table. Make changes and click **Save Changes**.
 
 `[SCREENSHOT: Inline edit panel]`
 
-### Deactivating / Deleting a Ticket Type
+### Deactivating / Deleting a Pass Type
 
-- If a ticket type has **tickets sold**, it can only be **deactivated** (hidden from the public, no new purchases). Existing tickets remain valid.
-- If no tickets have been sold and the user is a **super admin**, the type can be fully **deleted**.
+- If a pass type has **passes sold**, it can only be **deactivated** (hidden from the public, no new purchases). Existing passes remain valid.
+- If no passes have been sold and the user is a **super admin**, the type can be fully **deleted**.
 
 ---
 
@@ -306,7 +309,7 @@ Filter by: **order number**, **buyer name**, **email**, or **phone number**. The
 | Order # | Unique order ID (format: ORD-YYYYMMDD-XXXXX) |
 | Buyer | Name, email, and phone |
 | Game | Event name and venue |
-| Ticket Type | The type purchased |
+| Pass Type | The type purchased |
 | Qty | Number of purchase units |
 | Amount | Total charged |
 | Date | Date and time of purchase |
@@ -325,9 +328,9 @@ The footer row shows the total revenue for the current search result.
 
 **URL:** `/admin/reports/gate/[gameId]`
 
-Available for all games. Shows a per-ticket-type breakdown of:
-- Tickets sold
-- Tickets scanned (admitted)
+Available for all games. Shows a per-pass-type breakdown of:
+- Passes sold
+- Passes scanned (admitted)
 - No-shows (sold but not scanned)
 - Invalid scan attempts
 
@@ -339,16 +342,41 @@ Select a game from the reports page to view its reconciliation.
 
 ### End of Day Report
 
-Automatically emailed to configured recipients every day at **11:59 PM PHT** via a scheduled cron job. Contains a daily transaction summary. No manual action is needed.
+Automatically emailed to configured recipients every day at **11:59 PM PHT** via a scheduled cron job. Contains:
+
+- **Summary** — total revenue, passes sold, and transaction count for the day
+- **Sales by Game** — revenue and passes sold per game
+- **Sales by Pass Type** — revenue and quantity sold per pass type
+- **Scans Today** — gate scan counts broken down by result:
+  - **Valid** (green) — passes successfully admitted
+  - **Already Used** (amber) — duplicate scan attempts
+  - **Invalid** (red) — unrecognised QR codes
+  - **Total** — sum of all scan attempts
+
+A CSV attachment (`transactions-YYYY-MM-DD.csv`) with all individual orders is included.
+
+No manual action is needed — the report runs automatically.
+
+### Transaction Notification Emails
+
+In addition to the nightly EOD report, **every confirmed purchase** triggers an immediate notification email to all active EOD recipients. This email includes:
+
+- Game name and date
+- Buyer name and email
+- Passes purchased (type and quantity)
+- Total amount paid
+- Timestamp (Asia/Manila)
+
+This allows recipients to monitor sales in real time throughout the day.
 
 ### EOD Report Recipients
 
 **URL:** `/admin/reports/recipients`
 
-Manage which email addresses receive the daily EOD report.
+Manage which email addresses receive both the daily EOD report and real-time transaction notifications.
 
 - **Add** — enter an email address and click **+ Add**. Duplicate emails are rejected.
-- **Remove** — click **Remove** next to an address, then confirm. The change takes effect at the next scheduled send.
+- **Remove** — click **Remove** next to an address, then confirm. The change takes effect immediately.
 
 `[SCREENSHOT: EOD Recipients page — list with add form]`
 
@@ -361,8 +389,9 @@ Manage which email addresses receive the daily EOD report.
 | Dashboard | `/admin` |
 | New Game | `/admin/games/new` |
 | Edit Game | `/admin/games/[gameId]/edit` |
-| Manage Ticket Types | `/admin/games/[gameId]/tickets` |
+| Manage Pass Types | `/admin/games/[gameId]/tickets` |
 | Orders | `/admin/orders` |
+| Find Passes | `/admin/tickets/find` |
 | Reports | `/admin/reports` |
 | Gate Report | `/admin/reports/gate/[gameId]` |
 | EOD Recipients | `/admin/reports/recipients` |

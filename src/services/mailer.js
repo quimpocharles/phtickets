@@ -2,6 +2,7 @@ const fs       = require('fs');
 const path     = require('path');
 const { Resend } = require('resend');
 const { cloudinary } = require('./cloudinary');
+const ReportRecipient = require('../models/ReportRecipient');
 
 let _resend = null;
 function getResend() {
@@ -78,7 +79,7 @@ async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) 
                       <p style="margin:3px 0 0;font-size:10px;color:rgba(255,255,255,0.4);">${scopeLabel}</p>
                     </td>
                     <td style="vertical-align:middle;text-align:right;white-space:nowrap;padding-left:8px;">
-                      <p style="margin:0;font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.3);">Ticket</p>
+                      <p style="margin:0;font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.3);">Pass</p>
                       <p style="margin:2px 0 0;font-size:12px;font-weight:700;color:#ffffff;">${idx + 1} / ${allTickets.length}</p>
                     </td>
                   </tr>
@@ -103,7 +104,7 @@ async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) 
                   </tr>
                   <tr>
                     <td style="padding-bottom:10px;vertical-align:top;">
-                      <p style="margin:0 0 2px;font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Ticket No.</p>
+                      <p style="margin:0 0 2px;font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Pass No.</p>
                       <p style="margin:0;font-size:10px;font-weight:700;color:#111827;font-family:monospace;letter-spacing:0.04em;">${t.ticketId || ''}</p>
                     </td>
                     <td style="padding-bottom:10px;vertical-align:top;text-align:right;">
@@ -114,7 +115,7 @@ async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) 
                   ${buyerName ? `
                   <tr>
                     <td colspan="2">
-                      <p style="margin:0 0 2px;font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Ticket Holder</p>
+                      <p style="margin:0 0 2px;font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Pass Holder</p>
                       <p style="margin:0;font-size:12px;font-weight:600;color:#111827;">${buyerName}</p>
                     </td>
                   </tr>` : ''}
@@ -168,7 +169,7 @@ async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) 
           <tr>
             <td>
               <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#6b7280;">Payment Confirmed</p>
-              <p style="margin:0;font-size:22px;font-weight:800;color:#ffffff;">Your Tickets Are Ready</p>
+              <p style="margin:0;font-size:22px;font-weight:800;color:#ffffff;">Your Passes Are Ready</p>
             </td>
           </tr>
         </table>
@@ -178,7 +179,7 @@ async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) 
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width:680px;margin:0 auto;">
           <tr>
             <td style="text-align:center;padding-bottom:32px;">
-              <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.3);">Tickets sent to ${to}</p>
+              <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.3);">Passes sent to ${to}</p>
             </td>
           </tr>
         </table>
@@ -188,14 +189,14 @@ async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) 
 </body>
 </html>`;
 
-  const from = `Global Hoops Tickets <${process.env.EMAIL_FROM || 'tickets@globalhoops.shop'}>`;
+  const from = `Global Hoops Passes <${process.env.EMAIL_FROM || 'tickets@globalhoops.shop'}>`;
 
-  console.log('[mailer] Sending ticket email to:', to, '| from:', from);
+  console.log('[mailer] Sending pass email to:', to, '| from:', from);
 
   const { error } = await getResend().emails.send({
     from,
     to,
-    subject: `Your Global Hoops Tickets – Order ${allTickets[0]?.orderNumber ?? ''}`,
+    subject: `Your Global Hoops Passes – Order ${allTickets[0]?.orderNumber ?? ''}`,
     html,
   });
 
@@ -204,4 +205,113 @@ async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) 
   console.log('[mailer] Email sent successfully to:', to);
 }
 
-module.exports = { sendTicketEmail };
+/**
+ * Send a real-time transaction notification email to all active EOD report recipients.
+ * Called non-blocking after a successful payment is processed.
+ *
+ * @param {{ game, buyerName, buyerEmail, grandTotal, allTickets }} opts
+ */
+async function sendTransactionNotification({ game, buyerName, buyerEmail, grandTotal, allTickets }) {
+  const activeRecipients = await ReportRecipient.find({ active: true }).select('email name');
+  if (!activeRecipients.length) return;
+
+  const recipients = activeRecipients.map((r) =>
+    r.name ? `${r.name} <${r.email}>` : r.email
+  );
+
+  const gameDate = new Date(game.gameDate);
+  const dateStr  = gameDate.toLocaleDateString('en-PH', {
+    month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila',
+  });
+  const now = new Date().toLocaleString('en-PH', {
+    timeZone: 'Asia/Manila',
+    month: 'long', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true,
+  });
+
+  // Group passes by type name
+  const typeMap = new Map();
+  for (const t of allTickets) {
+    typeMap.set(t.ticketTypeName, (typeMap.get(t.ticketTypeName) ?? 0) + 1);
+  }
+
+  const passRows = [...typeMap.entries()].map(([name, count]) => `
+    <tr>
+      <td style="padding:8px 16px;font-size:13px;color:#374151;border-bottom:1px solid #f3f4f6;">${name}</td>
+      <td style="padding:8px 16px;font-size:13px;font-weight:700;color:#111827;text-align:right;border-bottom:1px solid #f3f4f6;">${count}</td>
+    </tr>`).join('');
+
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:#0133ae;padding:20px 28px;">
+              <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.6);">New Transaction</p>
+              <p style="margin:4px 0 0;font-size:20px;font-weight:900;color:#ffffff;">&#8369;${(grandTotal).toLocaleString('en-PH')} &mdash; Payment Confirmed</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:24px 28px;">
+
+              <p style="margin:0 0 2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9ca3af;">Game</p>
+              <p style="margin:0 0 16px;font-size:15px;font-weight:700;color:#111827;">${game.description}</p>
+
+              <p style="margin:0 0 2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9ca3af;">Date &amp; Venue</p>
+              <p style="margin:0 0 16px;font-size:13px;color:#374151;">${dateStr} &middot; ${game.venue}</p>
+
+              <p style="margin:0 0 2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9ca3af;">Buyer</p>
+              <p style="margin:0 0 16px;font-size:13px;color:#374151;">${buyerName || '&mdash;'} &lt;${buyerEmail}&gt;</p>
+
+              <p style="margin:0 0 8px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9ca3af;">Passes</p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:16px;">
+                <tbody>${passRows}</tbody>
+              </table>
+
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+                <tr>
+                  <td style="padding:12px 16px;font-size:13px;font-weight:600;color:#374151;">Total Paid</td>
+                  <td style="padding:12px 16px;font-size:16px;font-weight:900;color:#111827;text-align:right;">&#8369;${(grandTotal).toLocaleString('en-PH')}</td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:14px 28px;border-top:1px solid #f3f4f6;">
+              <p style="margin:0;font-size:11px;color:#9ca3af;">Confirmed at ${now} &middot; Global Hoops Pass System</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  const from = `Global Hoops Passes <${process.env.EMAIL_FROM || 'tickets@globalhoops.shop'}>`;
+
+  const { error } = await getResend().emails.send({
+    from,
+    to: recipients,
+    subject: `New Sale: ₱${(grandTotal).toLocaleString('en-PH')} — ${game.description}`,
+    html,
+  });
+
+  if (error) throw new Error(error.message);
+
+  console.log('[mailer] Transaction notification sent to:', recipients.join(', '));
+}
+
+module.exports = { sendTicketEmail, sendTransactionNotification };

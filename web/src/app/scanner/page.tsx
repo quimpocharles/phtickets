@@ -179,7 +179,7 @@ export default function ScannerPage() {
       <div className="relative z-10 flex items-center justify-between px-4 pt-4 pb-2">
         <div>
           <p className="text-white font-bold text-sm leading-none">QR Scanner</p>
-          <p className="text-white/40 text-xs mt-0.5">Global Hoops Ticket Verification</p>
+          <p className="text-white/40 text-xs mt-0.5">Global Hoops Pass Verification</p>
         </div>
         <button
           onClick={handleSignOut}
@@ -197,7 +197,7 @@ export default function ScannerPage() {
         {phase === 'verifying' && (
           <div className="flex flex-col items-center gap-3 mb-48">
             <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-            <p className="text-white/70 text-sm font-medium">Verifying ticket…</p>
+            <p className="text-white/70 text-sm font-medium">Verifying pass…</p>
           </div>
         )}
       </div>
@@ -206,7 +206,7 @@ export default function ScannerPage() {
       {(phase === 'scanning' || phase === 'verifying') && !cameraError && (
         <div className="relative z-10 px-4 pb-6">
           <p className="text-center text-white/30 text-[11px] font-medium uppercase tracking-widest mb-2">
-            Or enter ticket ID manually
+            Or enter pass ID manually
           </p>
           <form onSubmit={handleManualSubmit} className="flex gap-2">
             <input
@@ -289,7 +289,7 @@ const RESULT_CONFIG = {
   },
   already_used: {
     label:       'ALREADY USED',
-    sublabel:    'Ticket was scanned before',
+    sublabel:    'Pass was scanned before',
     bg:          'bg-accent',
     iconBg:      'bg-offblack/10',
     icon: (
@@ -301,7 +301,7 @@ const RESULT_CONFIG = {
   },
   invalid: {
     label:       'INVALID',
-    sublabel:    'Ticket not recognised',
+    sublabel:    'Pass not recognised',
     bg:          'bg-danger',
     iconBg:      'bg-white/15',
     icon: (
@@ -406,7 +406,7 @@ function ResultPanel({ result, onReset }: ResultPanelProps) {
           onClick={onReset}
           className="w-full bg-offblack hover:bg-offblack/85 active:scale-[0.98] text-white font-bold py-3.5 rounded-xl transition-all"
         >
-          Scan Next Ticket
+          Scan Next Pass
         </button>
 
         <div className="h-safe-area-inset-bottom" />

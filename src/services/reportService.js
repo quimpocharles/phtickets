@@ -1,4 +1,5 @@
-const Order = require('../models/Order');
+const Order   = require('../models/Order');
+const ScanLog = require('../models/ScanLog');
 
 /**
  * Returns the start and end of today in UTC, calculated using Asia/Manila (UTC+8).
@@ -131,6 +132,21 @@ async function generateDailyTransactionReport() {
 
   const byTicketType = [...typeMap.values()].sort((a, b) => b.revenue - a.revenue);
 
+  // ── Scan stats ────────────────────────────────────────────────────────────
+
+  const scanCounts = await ScanLog.aggregate([
+    { $match: { scanTime: { $gte: startUtc, $lte: endUtc } } },
+    { $group: { _id: '$scanResult', count: { $sum: 1 } } },
+  ]);
+
+  const scanStats = { valid: 0, alreadyUsed: 0, invalid: 0, total: 0 };
+  for (const r of scanCounts) {
+    if (r._id === 'VALID')        scanStats.valid       = r.count;
+    else if (r._id === 'ALREADY_USED') scanStats.alreadyUsed = r.count;
+    else if (r._id === 'INVALID') scanStats.invalid     = r.count;
+  }
+  scanStats.total = scanStats.valid + scanStats.alreadyUsed + scanStats.invalid;
+
   return {
     date:               labelPh,
     startUtc,
@@ -141,6 +157,7 @@ async function generateDailyTransactionReport() {
     byGame,
     byTicketType,
     orders,
+    scanStats,
   };
 }
 

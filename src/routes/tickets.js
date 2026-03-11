@@ -359,7 +359,7 @@ router.get('/find', async (req, res) => {
       .sort({ createdAt: -1 });
 
     if (orders.length === 0) {
-      return res.status(404).json({ success: false, message: 'No tickets found for that email and phone number.' });
+      return res.status(404).json({ success: false, message: 'No passes found for that email and phone number.' });
     }
 
     const results = await Promise.all(

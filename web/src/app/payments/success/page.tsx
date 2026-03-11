@@ -36,7 +36,7 @@ function SuccessContent() {
       const { toPng } = await import('html-to-image');
       const dataUrl = await toPng(node, { cacheBust: true, pixelRatio: 2 });
       const link = document.createElement('a');
-      link.download = `ticket-${ticketId}.png`;
+      link.download = `pass-${ticketId}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
@@ -105,7 +105,7 @@ function SuccessContent() {
       <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-3 px-4">
         <p className="text-white font-bold text-lg">Payment received!</p>
         <p className="text-white/50 text-sm text-center max-w-sm">
-          Your tickets are being processed. Check your email — we&apos;ll send your QR codes there shortly.
+          Your passes are being processed. Check your email — we&apos;ll send your QR codes there shortly.
         </p>
         <a href="/" className="mt-2 text-yellow-400 text-sm hover:text-yellow-300 transition-colors">
           ← Back to games
@@ -196,7 +196,7 @@ function SuccessContent() {
                   </p>
                 </div>
                 <div className="text-right shrink-0 ml-3">
-                  <p className="text-white/30 text-[10px] uppercase tracking-wider">Ticket</p>
+                  <p className="text-white/30 text-[10px] uppercase tracking-wider">Pass</p>
                   <p className="text-white font-bold text-sm">{idx + 1} / {allTickets.length}</p>
                 </div>
               </div>
@@ -214,7 +214,7 @@ function SuccessContent() {
                     <p className="text-lg font-black text-gray-900 mt-0.5">₱{grandTotal.toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Ticket No.</p>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Pass No.</p>
                     <p className="text-[10px] font-bold font-mono text-gray-900 mt-0.5 tracking-wide">{ticket.ticketId}</p>
                   </div>
                   <div className="text-right">
@@ -223,7 +223,7 @@ function SuccessContent() {
                   </div>
                   {buyer.name && (
                     <div className="col-span-2">
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Ticket Holder</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Pass Holder</p>
                       <p className="text-xs font-semibold text-gray-900 mt-0.5">{buyer.name}</p>
                     </div>
                   )}
@@ -299,7 +299,7 @@ function SuccessContent() {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-                Download Ticket {idx + 1}
+                Download Pass {idx + 1}
               </>
             )}
           </button>
@@ -307,7 +307,7 @@ function SuccessContent() {
         ))}
 
         <p className="no-print text-xs text-white/30 pb-8 text-center">
-          Tickets also sent to {buyer.email}
+          Passes also sent to {buyer.email}
         </p>
       </div>
     </div>

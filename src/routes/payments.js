@@ -7,7 +7,7 @@ const TicketReservation = require('../models/TicketReservation');
 const Game = require('../models/Game');
 const { getPaymentStatus } = require('../services/paymongo');
 const { generateTickets } = require('../utils/generateTickets');
-const { sendTicketEmail } = require('../services/mailer');
+const { sendTicketEmail, sendTransactionNotification } = require('../services/mailer');
 const { sendTicketSMS } = require('../services/sms');
 const { generateOrderNumber } = require('../utils/orderNumber');
 const Ticket = require('../models/Ticket');
@@ -210,7 +210,16 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         game,
       }).catch((err) => console.error('[sms]', err.message));
 
-      return res.json({ success: true, message: 'Payment confirmed. Tickets generated.' });
+      // ── Step 11: Notify EOD recipients of confirmed transaction ───────────
+      sendTransactionNotification({
+        game,
+        buyerName:  reservations[0].buyerName,
+        buyerEmail: reservations[0].buyerEmail,
+        grandTotal: grandTotalCalc,
+        allTickets,
+      }).catch((err) => console.error('[mailer] transaction notification:', err.message));
+
+      return res.json({ success: true, message: 'Payment confirmed. Passes generated.' });
     }
 
     // =========================================================================
@@ -394,6 +403,14 @@ router.post('/process/:cartId', async (req, res) => {
       orderNumber: firstOrder.orderNumber,
       game,
     }).catch((err) => console.error('[sms]', err.message));
+
+    sendTransactionNotification({
+      game,
+      buyerName:  reservations[0].buyerName,
+      buyerEmail: reservations[0].buyerEmail,
+      grandTotal,
+      allTickets,
+    }).catch((err) => console.error('[mailer] transaction notification:', err.message));
 
     // Build response in same shape as /order/cart/:cartId
     const ticketsByOrder = new Map();

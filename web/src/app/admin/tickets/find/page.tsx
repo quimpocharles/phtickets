@@ -77,7 +77,7 @@ export default function AdminFindTicketsPage() {
     <div className="max-w-3xl mx-auto px-4 py-8">
 
       <div className="mb-6">
-        <h1 className="text-2xl font-black text-offblack">Find Tickets</h1>
+        <h1 className="text-2xl font-black text-offblack">Find Passes</h1>
         <p className="text-sm text-offblack/40 mt-1">Search by buyer name or email address.</p>
       </div>
 
@@ -119,8 +119,8 @@ export default function AdminFindTicketsPage() {
         <>
           <p className="text-sm text-offblack/40 mb-3">
             {results.length === 0
-              ? 'No tickets found.'
-              : `${results.length} order${results.length !== 1 ? 's' : ''} · ${totalTickets} ticket${totalTickets !== 1 ? 's' : ''}`}
+              ? 'No passes found.'
+              : `${results.length} order${results.length !== 1 ? 's' : ''} · ${totalTickets} pass${totalTickets !== 1 ? 'es' : ''}`}
           </p>
 
           <div className="flex flex-col gap-3">
@@ -163,7 +163,7 @@ export default function AdminFindTicketsPage() {
                         <span className="text-offblack/20">·</span>
                         <span className="text-xs font-bold text-offblack">₱{order.totalAmount.toLocaleString()}</span>
                         <span className="text-offblack/20">·</span>
-                        <span className="text-xs text-offblack/50">{tickets.length} ticket{tickets.length !== 1 ? 's' : ''}</span>
+                        <span className="text-xs text-offblack/50">{tickets.length} pass{tickets.length !== 1 ? 'es' : ''}</span>
                       </div>
                     </div>
                     <svg
@@ -178,7 +178,7 @@ export default function AdminFindTicketsPage() {
                   {isOpen && (
                     <div className="border-t border-black/6">
                       {tickets.length === 0 ? (
-                        <p className="px-5 py-4 text-sm text-offblack/40">No tickets generated yet.</p>
+                        <p className="px-5 py-4 text-sm text-offblack/40">No passes generated yet.</p>
                       ) : (
                         tickets.map((ticket, idx) => (
                           <div

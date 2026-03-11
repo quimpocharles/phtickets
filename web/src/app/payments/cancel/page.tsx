@@ -32,7 +32,7 @@ function CancelContent() {
             href="/"
             className="w-full bg-gray-900 hover:bg-gray-700 text-white text-sm font-semibold py-3 rounded-xl transition-colors text-center"
           >
-            Browse Tickets
+            Browse Passes
           </a>
           <a
             href="/"

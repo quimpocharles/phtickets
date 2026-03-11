@@ -9,20 +9,22 @@ const SENDER = 'Global Hoops Ticketing System <puso-support@codeatcoffee.com>';
  * @returns {string}
  */
 function eodReportText(report) {
-  const { date, totalRevenue, totalTicketsSold, totalTransactions, byGame, byTicketType } = report;
+  const { date, totalRevenue, totalTicketsSold, totalTransactions, byGame, byTicketType, scanStats } = report;
 
   const php     = (n) => `PHP ${Number(n).toLocaleString('en-PH')}`;
   const divider = (char = '-', len = 60) => char.repeat(len);
   const row     = (label, value, width = 44) =>
     `  ${label.padEnd(width - String(value).length)}${value}`;
 
+  const sc = scanStats ?? { valid: 0, alreadyUsed: 0, invalid: 0, total: 0 };
+
   const gameLines = byGame.length === 0
     ? '  No sales recorded for this period.'
     : byGame.map((g) =>
         `  ${g.game}\n` +
         `  ${g.venue}\n` +
-        row('  Tickets Sold:', String(g.ticketsSold)) + '\n' +
-        row('  Revenue:',      php(g.revenue))
+        row('  Passes Sold:', String(g.ticketsSold)) + '\n' +
+        row('  Revenue:',     php(g.revenue))
       ).join('\n\n');
 
   const typeLines = byTicketType.length === 0
@@ -44,7 +46,7 @@ function eodReportText(report) {
     'SUMMARY',
     divider(),
     row('Total Revenue:',      php(totalRevenue)),
-    row('Total Tickets Sold:', String(totalTicketsSold)),
+    row('Total Passes Sold:',  String(totalTicketsSold)),
     row('Total Transactions:', String(totalTransactions)),
     '',
     divider(),
@@ -53,9 +55,17 @@ function eodReportText(report) {
     gameLines,
     '',
     divider(),
-    'SALES BY TICKET TYPE',
+    'SALES BY PASS TYPE',
     divider(),
     typeLines,
+    '',
+    divider(),
+    'SCANS',
+    divider(),
+    row('Valid:',        String(sc.valid)),
+    row('Already Used:', String(sc.alreadyUsed)),
+    row('Invalid:',      String(sc.invalid)),
+    row('Total Scans:',  String(sc.total)),
     '',
     divider(),
     'Generated automatically at 11:59 PM Philippine Standard Time.',
@@ -73,7 +83,8 @@ function eodReportText(report) {
  * @returns {{ subject: string, from: string, text: string, html: string }}
  */
 function eodReportTemplate(report) {
-  const { date, totalRevenue, totalTicketsSold, totalTransactions, byGame, byTicketType } = report;
+  const { date, totalRevenue, totalTicketsSold, totalTransactions, byGame, byTicketType, scanStats } = report;
+  const sc = scanStats ?? { valid: 0, alreadyUsed: 0, invalid: 0, total: 0 };
 
   const subject = `Global Hoops Ticketing System - End of Day Report | ${date}`;
 
@@ -101,7 +112,7 @@ function eodReportTemplate(report) {
         ${cell(`<strong>${php(g.revenue)}</strong>`, 'right')}
       </tr>`).join('');
 
-  // ── Sales by Ticket Type rows ─────────────────────────────────────────────
+  // ── Sales by Pass Type rows ───────────────────────────────────────────────
 
   const typeRows = byTicketType.length === 0
     ? `<tr><td colspan="4" style="padding:16px;text-align:center;color:#aaaaaa;font-size:13px;">No sales recorded for this period.</td></tr>`
@@ -183,13 +194,13 @@ function eodReportTemplate(report) {
                     </p>
                   </td>
                   <td width="2%"></td>
-                  <!-- Total Tickets Sold -->
+                  <!-- Total Passes Sold -->
                   <td width="32%" style="background:#f5f4f0;padding:20px 16px;border-radius:8px;text-align:center;vertical-align:middle;">
                     <p style="margin:0;font-size:26px;font-weight:900;color:#1a1a1a;line-height:1;">
                       ${totalTicketsSold.toLocaleString('en-PH')}
                     </p>
                     <p style="margin:6px 0 0;font-size:11px;font-weight:600;color:#888888;text-transform:uppercase;letter-spacing:0.06em;">
-                      Tickets Sold
+                      Passes Sold
                     </p>
                   </td>
                   <td width="2%"></td>
@@ -213,7 +224,7 @@ function eodReportTemplate(report) {
                 <thead>
                   <tr>
                     ${headerCell('Game')}
-                    ${headerCell('Tickets Sold', 'center')}
+                    ${headerCell('Passes Sold', 'center')}
                     ${headerCell('Revenue', 'right')}
                   </tr>
                 </thead>
@@ -230,14 +241,14 @@ function eodReportTemplate(report) {
                 </tfoot>` : ''}
               </table>
 
-              <!-- ── Sales by Ticket Type ── -->
+              <!-- ── Sales by Pass Type ── -->
               <h2 style="margin:0 0 14px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#0133ae;">
-                Sales by Ticket Type
+                Sales by Pass Type
               </h2>
               <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eeeeee;border-radius:8px;overflow:hidden;margin-bottom:32px;font-size:13px;">
                 <thead>
                   <tr>
-                    ${headerCell('Ticket Type')}
+                    ${headerCell('Pass Type')}
                     ${headerCell('Game')}
                     ${headerCell('Qty Sold', 'center')}
                     ${headerCell('Revenue', 'right')}
@@ -254,6 +265,37 @@ function eodReportTemplate(report) {
                     <td style="padding:10px 14px;text-align:right;font-weight:700;color:#0133ae;">${php(totalRevenue)}</td>
                   </tr>
                 </tfoot>` : ''}
+              </table>
+
+              <!-- ── Scans ── -->
+              <h2 style="margin:0 0 14px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#0133ae;">
+                Scans Today
+              </h2>
+              <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eeeeee;border-radius:8px;overflow:hidden;margin-bottom:32px;font-size:13px;">
+                <thead>
+                  <tr>
+                    ${headerCell('Valid', 'center')}
+                    ${headerCell('Already Used', 'center')}
+                    ${headerCell('Invalid', 'center')}
+                    ${headerCell('Total', 'center')}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style="background:#ffffff;">
+                    <td style="padding:14px;text-align:center;">
+                      <span style="font-size:22px;font-weight:900;color:#16a34a;">${sc.valid.toLocaleString('en-PH')}</span>
+                    </td>
+                    <td style="padding:14px;text-align:center;">
+                      <span style="font-size:22px;font-weight:900;color:#d97706;">${sc.alreadyUsed.toLocaleString('en-PH')}</span>
+                    </td>
+                    <td style="padding:14px;text-align:center;">
+                      <span style="font-size:22px;font-weight:900;color:#dc2626;">${sc.invalid.toLocaleString('en-PH')}</span>
+                    </td>
+                    <td style="padding:14px;text-align:center;">
+                      <span style="font-size:22px;font-weight:900;color:#1a1a1a;">${sc.total.toLocaleString('en-PH')}</span>
+                    </td>
+                  </tr>
+                </tbody>
               </table>
 
               <!-- ── Footer ── -->
