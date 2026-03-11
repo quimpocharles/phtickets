@@ -10,11 +10,12 @@
 2. [What Customers Receive](#2-what-customers-receive)
 3. [Find My Passes](#3-find-my-passes)
 4. [At the Venue — Gate Entry](#4-at-the-venue--gate-entry)
-5. [Admin — Dashboard](#5-admin--dashboard)
-6. [Admin — Managing Games](#6-admin--managing-games)
-7. [Admin — Managing Pass Types](#7-admin--managing-pass-types)
-8. [Admin — Orders](#8-admin--orders)
-9. [Admin — Reports](#9-admin--reports)
+5. [Admin — Roles & Permissions](#5-admin--roles--permissions)
+6. [Admin — Dashboard](#6-admin--dashboard)
+7. [Admin — Managing Games](#7-admin--managing-games)
+8. [Admin — Managing Pass Types](#8-admin--managing-pass-types)
+9. [Admin — Orders](#9-admin--orders)
+10. [Admin — Reports](#10-admin--reports)
 
 ---
 
@@ -184,10 +185,36 @@ Guards use the Scanner app at **`/scanner`** — a full-screen PWA optimized for
 
 ---
 
-## 5. Admin — Dashboard
+## 5. Admin — Roles & Permissions
+
+There are three admin roles. Each role is assigned at account creation and controls what the user can see and do.
+
+| Feature | `super_admin` | `admin` | `scanner` |
+|---------|:---:|:---:|:---:|
+| Dashboard (view games & stats) | ✅ | ✅ | — |
+| Add / Edit / Delete games | ✅ | — | — |
+| Create pass types | ✅ | — | — |
+| Edit / deactivate pass types | ✅ | ✅ | — |
+| View orders | ✅ | ✅ | — |
+| Find passes (by name/email) | ✅ | — | — |
+| View reports | ✅ | ✅ | — |
+| Manage EOD recipients | ✅ | — | — |
+| Manage teams | ✅ | — | — |
+| Manage admin accounts | ✅ | — | — |
+| Scan QR codes at gate | ✅ | ✅ | ✅ |
+
+### Login
+
+**URL:** `/admin/login`
+
+All admin users log in with their email and password. The password field has a show/hide toggle. After login, the user is redirected to `/admin` (dashboard) or `/scanner` depending on their role.
+
+---
+
+## 6. Admin — Dashboard
 
 **URL:** `/admin`
-**Access:** JWT-protected. Login required at `/admin/login`.
+**Access:** All admin roles (except `scanner`). Login required at `/admin/login`.
 
 The dashboard shows a live summary of all games:
 
@@ -211,7 +238,7 @@ Lists every game with:
 - Passes sold (with visual fill bar — green → yellow → red as it fills up)
 - Passes remaining (turns red when sold out)
 - Revenue
-- Actions: **Edit**, **Delete**, **Manage Passes**
+- Actions: **Edit**, **Delete** *(super_admin only)*, **Manage Passes** *(all roles)*
 
 `[SCREENSHOT: Admin dashboard games table]`
 
@@ -219,7 +246,9 @@ The footer row shows totals across all games when more than one game exists.
 
 ---
 
-## 6. Admin — Managing Games
+## 7. Admin — Managing Games
+
+> **super_admin only** — `admin` users cannot create, edit, or delete games.
 
 ### Create a New Game
 
@@ -252,9 +281,10 @@ Triggered from the dashboard table. A confirmation prompt appears before deletio
 
 ---
 
-## 7. Admin — Managing Pass Types
+## 8. Admin — Managing Pass Types
 
 **URL:** `/admin/games/[gameId]/tickets`
+**Access:** All admin roles can view. `admin` can edit and deactivate. Only `super_admin` can create or delete.
 
 Each game can have multiple pass types (e.g. Single Day, Family Pass, VIP).
 
@@ -286,15 +316,16 @@ Click **Edit** on any active pass type row to open an inline edit panel below th
 ### Deactivating / Deleting a Pass Type
 
 - If a pass type has **passes sold**, it can only be **deactivated** (hidden from the public, no new purchases). Existing passes remain valid.
-- If no passes have been sold and the user is a **super admin**, the type can be fully **deleted**.
+- If no passes have been sold and the user is a **super_admin**, the type can be fully **deleted**.
 
 ---
 
-## 8. Admin — Orders
+## 9. Admin — Orders
 
 **URL:** `/admin/orders`
+**Access:** `super_admin` and `admin`.
 
-A searchable table of all paid orders.
+A searchable, paginated table of all paid orders.
 
 ### Search
 
@@ -314,13 +345,15 @@ Filter by: **order number**, **buyer name**, **email**, or **phone number**. The
 | Amount | Total charged |
 | Date | Date and time of purchase |
 
-The footer row shows the total revenue for the current search result.
+The footer row shows the total revenue for the current search result. Orders are paginated at **25 per page**; use the page controls at the bottom to navigate.
 
 `[SCREENSHOT: Orders table with footer total]`
 
+`[SCREENSHOT: Pagination controls]`
+
 ---
 
-## 9. Admin — Reports
+## 10. Admin — Reports
 
 **URL:** `/admin/reports`
 
@@ -384,16 +417,17 @@ Manage which email addresses receive both the daily EOD report and real-time tra
 
 ## Admin Navigation Reference
 
-| Page | URL |
-|------|-----|
-| Dashboard | `/admin` |
-| New Game | `/admin/games/new` |
-| Edit Game | `/admin/games/[gameId]/edit` |
-| Manage Pass Types | `/admin/games/[gameId]/tickets` |
-| Orders | `/admin/orders` |
-| Find Passes | `/admin/tickets/find` |
-| Reports | `/admin/reports` |
-| Gate Report | `/admin/reports/gate/[gameId]` |
-| EOD Recipients | `/admin/reports/recipients` |
-| Admin Accounts | `/admin/admins` |
-| Login | `/admin/login` |
+| Page | URL | Access |
+|------|-----|--------|
+| Dashboard | `/admin` | all roles |
+| New Game | `/admin/games/new` | super_admin |
+| Edit Game | `/admin/games/[gameId]/edit` | super_admin |
+| Manage Pass Types | `/admin/games/[gameId]/tickets` | all roles |
+| Orders | `/admin/orders` | super_admin, admin |
+| Find Passes | `/admin/tickets/find` | super_admin |
+| Reports | `/admin/reports` | super_admin, admin |
+| Gate Report | `/admin/reports/gate/[gameId]` | super_admin, admin |
+| EOD Recipients | `/admin/reports/recipients` | super_admin |
+| Teams | `/admin/teams` | super_admin |
+| Admin Accounts | `/admin/admins` | super_admin |
+| Login | `/admin/login` | all |
