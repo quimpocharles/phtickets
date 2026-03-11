@@ -16,7 +16,7 @@ export default async function TicketsPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-10">
+    <div className="max-w-6xl mx-auto px-4 pt-24 pb-10">
       {/* Hero */}
       <div className="mb-10">
         <h1 className="text-3xl font-black uppercase tracking-tight text-offblack leading-none">
