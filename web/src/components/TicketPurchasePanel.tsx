@@ -171,8 +171,8 @@ export default function TicketPurchasePanel({ game }: Props) {
                 d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
             </svg>
           </div>
-          <p className="text-sm font-semibold text-offblack/50">No tickets selected</p>
-          <p className="text-xs text-offblack/30">Tap a ticket type to add to cart</p>
+          <p className="text-sm font-semibold text-offblack/50">No passes selected</p>
+          <p className="text-xs text-offblack/30">Tap a pass type to add to cart</p>
         </div>
       )}
 
@@ -184,11 +184,11 @@ export default function TicketPurchasePanel({ game }: Props) {
               {expired ? 'Reservation Expired' : 'Reservation Confirmed'}
             </p>
             <p className="text-white font-black text-lg leading-tight">
-              {expired ? 'Your hold has ended' : 'Tickets reserved for you'}
+              {expired ? 'Your hold has ended' : 'Passes reserved for you'}
             </p>
             {cartItems.map(({ type, quantity }) => (
               <p key={type._id} className="text-white/70 text-sm">
-                {type.name} · {quantity} ticket{quantity > 1 ? 's' : ''}
+                {type.name} · {quantity} pass{quantity > 1 ? 'es' : ''}
               </p>
             ))}
             {form.country && (() => {
@@ -211,7 +211,7 @@ export default function TicketPurchasePanel({ game }: Props) {
                   onClick={() => { setReservation(null); setCart(new Map()); setDrawerOpen(false); }}
                   className="w-full bg-offblack hover:bg-black text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98]"
                 >
-                  Choose Tickets Again
+                  Choose Passes Again
                 </button>
               </>
             ) : (
@@ -372,7 +372,7 @@ export default function TicketPurchasePanel({ game }: Props) {
               {loading ? (
                 <>
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Reserving your tickets…
+                  Reserving your passes…
                 </>
               ) : (
                 'Proceed to Payment →'
@@ -430,12 +430,12 @@ export default function TicketPurchasePanel({ game }: Props) {
         {/* Left — Ticket type selection */}
         <div className="md:col-span-3">
           <h2 className="text-sm font-bold uppercase tracking-widest text-offblack/40 mb-3">
-            Select Ticket Type
+            Select Pass Type
           </h2>
 
           {game.ticketTypes.length === 0 ? (
             <div className="rounded-xl border border-black/10 p-8 text-center text-offblack/40">
-              No ticket types available for this game yet.
+              No pass types available for this game yet.
             </div>
           ) : (
             <div className="flex flex-col gap-3">

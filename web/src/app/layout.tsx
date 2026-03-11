@@ -8,11 +8,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
 
   title: {
-    default: 'Global Hoops Tickets — Official Ticket Store',
-    template: '%s | Global Hoops Tickets',
+    default: 'Global Hoops Passes — Official Pass Store',
+    template: '%s | Global Hoops Passes',
   },
   description:
-    'Buy official Smart Global Hoops International tickets online. ' +
+    'Buy official Smart Global Hoops International passes online. ' +
     'Mar 16–22, 2026 · Ateneo Blue Eagle Gym. ' +
     'Showcase, Camps, Prospect Combine & All Star Games. ' +
     'No log-in needed. Secure checkout. GCash, Maya, Card & QR Ph accepted.',
@@ -30,18 +30,18 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_PH',
     url: APP_URL,
-    siteName: 'Global Hoops Tickets',
-    title: 'Smart Global Hoops 2026 — Get Your Tickets Now',
+    siteName: 'Global Hoops Passes',
+    title: 'Smart Global Hoops 2026 — Get Your Passes Now',
     description:
       'Mar 16–22, 2026 · Ateneo Blue Eagle Gym. ' +
       'Showcase, Camps, Prospect Combine & All Star Games. ' +
-      'Buy tickets online — GCash, Maya, Card & QR Ph accepted.',
+      'Buy passes online — GCash, Maya, Card & QR Ph accepted.',
     images: [
       {
         url: '/smart-gh.jpg',
         width: 4501,
         height: 6000,
-        alt: 'Smart Global Hoops International 2026 — Official Ticket Store',
+        alt: 'Smart Global Hoops International 2026 — Official Pass Store',
       },
     ],
   },
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
   // ── Twitter / X ────────────────────────────────────────────────────────────
   twitter: {
     card: 'summary_large_image',
-    title: 'Smart Global Hoops 2026 — Get Your Tickets Now',
+    title: 'Smart Global Hoops 2026 — Get Your Passes Now',
     description:
       'Mar 16–22, 2026 · Ateneo Blue Eagle Gym. Showcase, Camps, Prospect Combine & All Star Games.',
     images: ['/smart-gh.jpg'],
@@ -66,7 +66,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Global Hoops Tickets',
+    title: 'Global Hoops Passes',
   },
 
   // ── Robots ─────────────────────────────────────────────────────────────────

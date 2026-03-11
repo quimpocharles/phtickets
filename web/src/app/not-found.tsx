@@ -24,7 +24,7 @@ export default function NotFound() {
         href="/"
         className="bg-offblack hover:bg-black text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm"
       >
-        Get Tickets →
+        Get Passes →
       </Link>
     </div>
   );

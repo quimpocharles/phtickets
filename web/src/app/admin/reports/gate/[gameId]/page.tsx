@@ -172,12 +172,12 @@ export default function GateReconciliationPage() {
         {/* ── Stat cards ── */}
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           <StatCard
-            label="Tickets Sold"
+            label="Passes Sold"
             value={report.totalSold.toLocaleString()}
             color="bg-offblack"
           />
           <StatCard
-            label="Tickets Scanned"
+            label="Passes Scanned"
             value={report.totalScanned.toLocaleString()}
             sub={`${scanRate}% attendance`}
             color="bg-primary"
@@ -191,13 +191,13 @@ export default function GateReconciliationPage() {
           <StatCard
             label="Invalid Scans"
             value={report.invalidScans.toLocaleString()}
-            sub="Unknown ticket IDs"
+            sub="Unknown pass IDs"
             color={report.invalidScans > 0 ? 'bg-danger' : 'bg-offblack'}
           />
           <StatCard
             label="Duplicate Scans"
             value={report.duplicateScans.toLocaleString()}
-            sub="Already-used tickets"
+            sub="Already-used passes"
             color={report.duplicateScans > 0 ? 'bg-danger' : 'bg-offblack'}
           />
 
@@ -223,15 +223,15 @@ export default function GateReconciliationPage() {
         {/* ── Per-ticket-type table ── */}
         <div className="bg-white rounded-2xl border border-black/8 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-black/8">
-            <h2 className="font-bold text-offblack">Breakdown by Ticket Type</h2>
+            <h2 className="font-bold text-offblack">Breakdown by Pass Type</h2>
             <p className="text-xs text-offblack/40 mt-0.5">
-              {report.byTicketType.length} ticket type{report.byTicketType.length !== 1 ? 's' : ''}
+              {report.byTicketType.length} pass type{report.byTicketType.length !== 1 ? 's' : ''}
             </p>
           </div>
 
           {report.byTicketType.length === 0 ? (
             <div className="px-6 py-12 text-center">
-              <p className="text-offblack/40 text-sm">No ticket data available for this game.</p>
+              <p className="text-offblack/40 text-sm">No pass data available for this game.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -239,7 +239,7 @@ export default function GateReconciliationPage() {
                 <thead>
                   <tr className="border-b border-black/6 bg-offwhite/60">
                     <th className="text-left px-6 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">
-                      Ticket Type
+                      Pass Type
                     </th>
                     <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">
                       Sold

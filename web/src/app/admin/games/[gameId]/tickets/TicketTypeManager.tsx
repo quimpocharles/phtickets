@@ -358,7 +358,7 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
 
       {/* Game title */}
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-offblack/40 mb-1">Managing tickets for</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-offblack/40 mb-1">Managing passes for</p>
         <h1 className="text-2xl font-black text-offblack">{gameTitle}</h1>
         <p className="text-sm text-offblack/50 mt-0.5">
           {game.venue} ·{' '}
@@ -372,10 +372,10 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
       {/* ── Existing ticket types ── */}
       <div className="bg-white rounded-2xl border border-black/8 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-black/8">
-          <h2 className="font-bold text-offblack">Ticket Types</h2>
+          <h2 className="font-bold text-offblack">Pass Types</h2>
           <p className="text-xs text-offblack/40 mt-0.5">
             {game.ticketTypes.length === 0
-              ? 'No ticket types yet.'
+              ? 'No pass types yet.'
               : `${game.ticketTypes.length} type${game.ticketTypes.length !== 1 ? 's' : ''} created`}
           </p>
         </div>
@@ -587,7 +587,7 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
                   {editError === 'conflict' ? (
                     <div className="flex items-center justify-between gap-3 bg-danger/5 rounded-lg px-3 py-2">
                       <p className="text-sm text-danger font-medium">
-                        This ticket type was updated by another admin. Please refresh the page.
+                        This pass type was updated by another admin. Please refresh the page.
                       </p>
                       <button
                         type="button"
@@ -635,7 +635,7 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
           </div>
         ) : (
           <div className="px-6 py-10 text-center text-offblack/40 text-sm">
-            Add ticket types below to get started.
+            Add pass types below to get started.
           </div>
         )}
       </div>
@@ -643,8 +643,8 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
       {/* ── Add ticket types form ── */}
       <form onSubmit={handleSubmit} noValidate className="bg-white rounded-2xl border border-black/8 shadow-sm overflow-hidden">
         <div className="bg-primary px-6 py-4">
-          <p className="text-white font-bold text-sm">Add Ticket Types</p>
-          <p className="text-white/60 text-xs mt-0.5">Add one or more ticket types at once.</p>
+          <p className="text-white font-bold text-sm">Add Pass Types</p>
+          <p className="text-white/60 text-xs mt-0.5">Add one or more pass types at once.</p>
         </div>
 
         <div className="px-6 py-6 flex flex-col gap-6">
@@ -653,7 +653,7 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
             <div key={i} className="flex flex-col gap-3 pb-4 border-b border-black/5 last:border-0 last:pb-0">
               {/* Row header */}
               <div className="flex items-center justify-between">
-                <p className="text-xs font-bold uppercase tracking-wide text-offblack/40">Ticket Type {i + 1}</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-offblack/40">Pass Type {i + 1}</p>
                 {rows.length > 1 && (
                   <button
                     type="button"
@@ -788,7 +788,7 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
           {/* Success */}
           {successCount !== null && (
             <p className="text-sm text-primary font-medium bg-primary/5 rounded-lg px-3 py-2">
-              ✓ {successCount} ticket type{successCount !== 1 ? 's' : ''} added successfully.
+              ✓ {successCount} pass type{successCount !== 1 ? 's' : ''} added successfully.
             </p>
           )}
 
@@ -821,7 +821,7 @@ export default function TicketTypeManager({ gameId }: { gameId: string }) {
                   Saving…
                 </>
               ) : (
-                `Save Ticket Type${rows.length > 1 ? 's' : ''} →`
+                `Save Pass Type${rows.length > 1 ? 's' : ''} →`
               )}
             </button>
           </div>

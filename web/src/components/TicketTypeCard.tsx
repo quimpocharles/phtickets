@@ -101,7 +101,7 @@ export default function TicketTypeCard({ ticketType, cartQty, onAdd, onChangeQty
             ₱{ticketType.price.toLocaleString()}
             <span className={`text-sm font-normal ml-1
               ${soldOut ? 'text-gray-400' : inCart ? 'text-white/75' : 'text-offblack/50'}`}>
-              / ticket
+              / pass
             </span>
           </p>
           {ticketType.serviceFee > 0 && (

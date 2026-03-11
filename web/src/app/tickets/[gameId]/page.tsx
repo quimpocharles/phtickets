@@ -35,9 +35,9 @@ export async function generateMetadata({ params }: Props) {
     month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila',
   });
   const dateRange = date === endDate ? date : `${date} – ${endDate}`;
-  const title = `${game.description} — Official Tickets`;
+  const title = `${game.description} — Official Passes`;
   const description =
-    `Get your official Smart Global Hoops International Showcase tickets for ${game.description}. ` +
+    `Get your official Smart Global Hoops International Showcase passes for ${game.description}. ` +
     `${dateRange} at ${game.venue}. Secure checkout via Maya — no log-in needed. ` +
     `Visa, Mastercard, JCB, Amex & QR Ph accepted.`;
   const image = game.bannerImage ?? '/gh-marquee.png';
@@ -47,9 +47,9 @@ export async function generateMetadata({ params }: Props) {
     title,
     description,
     keywords: [
-      'Global Hoops tickets', 'Smart Global Hoops', 'Global Hoops International Showcase tickets',
-      'basketball tickets Philippines', game.venue, game.description,
-      'buy basketball tickets online', 'Maya payment tickets',
+      'Global Hoops passes', 'Smart Global Hoops', 'Global Hoops International Showcase passes',
+      'basketball passes Philippines', game.venue, game.description,
+      'buy basketball passes online', 'Maya payment passes',
     ],
     alternates: { canonical: pageUrl },
     openGraph: {
@@ -57,7 +57,7 @@ export async function generateMetadata({ params }: Props) {
       title,
       description,
       url: pageUrl,
-      siteName: 'Global Hoops Tickets',
+      siteName: 'Global Hoops Passes',
       locale: 'en_PH',
       images: [{ url: image, width: 1200, height: 630, alt: `${game.description} — Smart Global Hoops International Showcase` }],
     },

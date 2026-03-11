@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Legal — Terms & Privacy',
-  description: 'Terms and Conditions and Privacy Policy for the Global Hoops International Showcase official ticketing system.',
+  description: 'Terms and Conditions and Privacy Policy for the Global Hoops International Showcase official pass system.',
   robots: { index: false, follow: false },
 };
 
@@ -34,7 +34,7 @@ export default function LegalPage() {
           <div>
             <h3 className="font-bold text-offblack mb-2">1. General</h3>
             <p>
-              These Terms &amp; Conditions govern the purchase of tickets through the Global Hoops International Showcase official ticketing
+              These Terms &amp; Conditions govern the purchase of passes through the Global Hoops International Showcase official pass
               website (<strong>phtickets.vercel.app</strong> or any associated domain). By completing a purchase
               you agree to these terms in full. Global Hoops International (&ldquo;Global Hoops&rdquo;)
               reserves the right to update these terms at any time without prior notice.
@@ -42,20 +42,20 @@ export default function LegalPage() {
           </div>
 
           <div>
-            <h3 className="font-bold text-offblack mb-2">2. Ticket Purchase</h3>
+            <h3 className="font-bold text-offblack mb-2">2. Pass Purchase</h3>
             <ul className="list-disc pl-5 flex flex-col gap-1.5">
-              <li>All ticket sales are processed through Maya Payment, a licensed payment service provider.</li>
+              <li>All pass sales are processed through Maya Payment, a licensed payment service provider.</li>
               <li>Prices are quoted and charged in Philippine Peso (PHP).</li>
-              <li>A ticket is issued only after payment is confirmed by Maya.</li>
-              <li>QR codes will be sent to the email address provided at checkout. Keep them safe — they act as your entry pass.</li>
-              <li>Global Hoops is not liable for tickets lost, forwarded, or shared with unauthorized third parties.</li>
+              <li>A pass is issued only after payment is confirmed by Maya.</li>
+              <li>QR codes will be sent to the email address provided at checkout. Keep them safe — they are your entry passes.</li>
+              <li>Global Hoops is not liable for passes lost, forwarded, or shared with unauthorized third parties.</li>
             </ul>
           </div>
 
           <div>
             <h3 className="font-bold text-offblack mb-2">3. No Refund Policy</h3>
             <p>
-              All ticket sales are <strong>final and non-refundable</strong>. No exchanges or cancellations
+              All pass sales are <strong>final and non-refundable</strong>. No exchanges or cancellations
               are accepted after payment is processed, except in the event that Global Hoops cancels or
               postpones the event (see Section 5).
             </p>
@@ -64,8 +64,8 @@ export default function LegalPage() {
           <div>
             <h3 className="font-bold text-offblack mb-2">4. Prohibited Resale</h3>
             <p>
-              Tickets may not be resold, transferred for profit, or listed on any secondary ticketing
-              marketplace. Global Hoops reserves the right to void tickets obtained through unauthorized channels
+              Passes may not be resold, transferred for profit, or listed on any secondary ticketing
+              marketplace. Global Hoops reserves the right to void passes obtained through unauthorized channels
               without compensation.
             </p>
           </div>
@@ -73,9 +73,9 @@ export default function LegalPage() {
           <div>
             <h3 className="font-bold text-offblack mb-2">5. Event Cancellation or Postponement</h3>
             <p>
-              If an event is cancelled by Global Hoops, ticket holders will be notified via email and a refund
+              If an event is cancelled by Global Hoops, pass holders will be notified via email and a refund
               or credit will be issued at Global Hoops&rsquo;s discretion. Global Hoops is not responsible for any
-              incidental costs (travel, accommodation, etc.) incurred by ticket holders.
+              incidental costs (travel, accommodation, etc.) incurred by pass holders.
             </p>
           </div>
 
@@ -91,8 +91,8 @@ export default function LegalPage() {
           <div>
             <h3 className="font-bold text-offblack mb-2">7. Limitation of Liability</h3>
             <p>
-              Global Hoops&rsquo;s total liability arising from ticket purchases shall not exceed the face value of
-              the ticket(s) purchased. Global Hoops is not liable for any indirect or consequential damages.
+              Global Hoops&rsquo;s total liability arising from pass purchases shall not exceed the face value of
+              the pass(es) purchased. Global Hoops is not liable for any indirect or consequential damages.
             </p>
           </div>
 
@@ -109,11 +109,11 @@ export default function LegalPage() {
 
           <div>
             <h3 className="font-bold text-offblack mb-2">1. Data We Collect</h3>
-            <p>When you purchase a ticket we collect:</p>
+            <p>When you purchase a pass we collect:</p>
             <ul className="list-disc pl-5 mt-2 flex flex-col gap-1.5">
-              <li><strong>Name</strong> — optional, used to personalise your ticket.</li>
-              <li><strong>Email address</strong> — required to deliver your QR-coded ticket(s).</li>
-              <li><strong>Mobile number</strong> — required for SMS ticket delivery.</li>
+              <li><strong>Name</strong> — optional, used to personalise your pass.</li>
+              <li><strong>Email address</strong> — required to deliver your QR-coded pass(es).</li>
+              <li><strong>Mobile number</strong> — required for SMS pass delivery.</li>
               <li><strong>Payment information</strong> — handled entirely by Maya; Global Hoops does not store card details.</li>
             </ul>
           </div>
@@ -121,7 +121,7 @@ export default function LegalPage() {
           <div>
             <h3 className="font-bold text-offblack mb-2">2. How We Use Your Data</h3>
             <ul className="list-disc pl-5 flex flex-col gap-1.5">
-              <li>To generate and deliver your tickets via email and SMS.</li>
+              <li>To generate and deliver your passes via email and SMS.</li>
               <li>To verify identity at the venue gate if required.</li>
               <li>To contact you about event changes or cancellations.</li>
               <li>To generate anonymised attendance reports for Global Hoops operations.</li>
@@ -130,10 +130,10 @@ export default function LegalPage() {
 
           <div>
             <h3 className="font-bold text-offblack mb-2">3. Third-Party Services</h3>
-            <p>We use the following third-party services to operate the ticketing system:</p>
+            <p>We use the following third-party services to operate the pass system:</p>
             <ul className="list-disc pl-5 mt-2 flex flex-col gap-1.5">
               <li><strong>Maya Payment</strong> — payment processing (PCI-DSS compliant).</li>
-              <li><strong>Semaphore</strong> — SMS delivery of tickets.</li>
+              <li><strong>Semaphore</strong> — SMS delivery of passes.</li>
               <li><strong>Cloudinary</strong> — storage of generated QR code images.</li>
               <li><strong>MongoDB Atlas</strong> — secure cloud database hosted in the Asia-Pacific region.</li>
             </ul>
@@ -146,7 +146,7 @@ export default function LegalPage() {
           <div>
             <h3 className="font-bold text-offblack mb-2">4. Data Retention</h3>
             <p>
-              Order and ticket records are retained for a minimum of one (1) year after the event date
+              Order and pass records are retained for a minimum of one (1) year after the event date
               for audit and reconciliation purposes, after which they may be anonymised or deleted.
             </p>
           </div>

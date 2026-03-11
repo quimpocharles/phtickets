@@ -97,7 +97,7 @@ export default function ReportsPage() {
               </svg>
             }
             title="Gate Reconciliation"
-            description="Tickets sold vs scanned, no-shows, and invalid scan attempts per game."
+            description="Passes sold vs scanned, no-shows, and invalid scan attempts per game."
             active
           />
           <ReportTypeCard
