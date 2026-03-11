@@ -209,7 +209,7 @@ router.patch('/admins/:id', requireSuperAdmin, async (req, res) => {
 // DELETE /admin/admins/:id  — soft-delete an admin account (super_admin only)
 // A super_admin cannot delete their own account.
 // ─────────────────────────────────────────────────────────────────────────────
-router.delete('/admins/:id', requireAdmin, async (req, res) => {
+router.delete('/admins/:id', requireSuperAdmin, async (req, res) => {
   if (req.params.id === req.admin._id.toString()) {
     return res.status(400).json({ success: false, message: 'You cannot delete your own account.' });
   }
@@ -260,7 +260,7 @@ router.get('/teams', async (_req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /admin/teams  — create a team (logo upload optional)
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/teams', (req, res, next) => {
+router.post('/teams', requireSuperAdmin, (req, res, next) => {
   uploadTeamLogo(req, res, (err) => {
     if (err) return res.status(400).json({ success: false, message: err.message });
     next();
@@ -290,7 +290,7 @@ router.post('/teams', (req, res, next) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // PATCH /admin/teams/:id  — update name, monicker, or logo
 // ─────────────────────────────────────────────────────────────────────────────
-router.patch('/teams/:id', (req, res, next) => {
+router.patch('/teams/:id', requireSuperAdmin, (req, res, next) => {
   uploadTeamLogo(req, res, (err) => {
     if (err) return res.status(400).json({ success: false, message: err.message });
     next();
@@ -335,7 +335,7 @@ router.delete('/teams/:id', requireSuperAdmin, async (req, res) => {
 // Create a new game. Banner image is optional (uploaded to Cloudinary).
 // Body: description (string), venue, gameDate, eventEndDate
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/games', (req, res, next) => {
+router.post('/games', requireSuperAdmin, (req, res, next) => {
   uploadBanner(req, res, (err) => {
     if (err) return res.status(400).json({ success: false, message: err.message });
     next();
@@ -370,7 +370,7 @@ router.post('/games', (req, res, next) => {
 // Add one or more ticket types to an existing game.
 // Body: single object { name, price, quantity } or an array of them.
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/games/:gameId/tickets', async (req, res) => {
+router.post('/games/:gameId/tickets', requireSuperAdmin, async (req, res) => {
   const { gameId } = req.params;
 
   const types = Array.isArray(req.body) ? req.body : [req.body];
@@ -631,7 +631,7 @@ router.get('/games', async (req, res) => {
 // PATCH /admin/games/:gameId
 // Update game fields. Banner image replacement is optional.
 // ─────────────────────────────────────────────────────────────────────────────
-router.patch('/games/:gameId', (req, res, next) => {
+router.patch('/games/:gameId', requireSuperAdmin, (req, res, next) => {
   uploadBanner(req, res, (err) => {
     if (err) return res.status(400).json({ success: false, message: err.message });
     next();
@@ -820,7 +820,7 @@ router.get('/reports/gate/:gameId/export', async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /admin/report-recipients
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/report-recipients', async (_req, res) => {
+router.get('/report-recipients', requireSuperAdmin, async (_req, res) => {
   try {
     const recipients = await ReportRecipient.find().sort({ createdAt: 1 });
     return res.json({ success: true, data: recipients });
@@ -833,7 +833,7 @@ router.get('/report-recipients', async (_req, res) => {
 // POST /admin/report-recipients
 // Body: { email, name?, active? }
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/report-recipients', async (req, res) => {
+router.post('/report-recipients', requireSuperAdmin, async (req, res) => {
   const { email, name, active } = req.body;
 
   if (!email) {

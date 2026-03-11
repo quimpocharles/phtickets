@@ -29,8 +29,10 @@ export default function AdminDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [adminRole, setAdminRole] = useState('');
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+  const isSuperAdmin = adminRole === 'super_admin';
 
   const fetchDashboard = useCallback(async () => {
     const token = localStorage.getItem('adminToken');
@@ -74,6 +76,7 @@ export default function AdminDashboard() {
   }, [API_URL, router]);
 
   useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
+  useEffect(() => { setAdminRole(localStorage.getItem('adminRole') ?? ''); }, []);
 
   async function handleDelete(gameId: string) {
     setDeleting(true);
@@ -142,19 +145,21 @@ export default function AdminDashboard() {
     <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-black text-offblack">Dashboard</h1>
-          <a
-            href="/admin/games/new"
-            className="bg-primary hover:bg-primary/90 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-all active:scale-[0.98]"
-          >
-            + Add Game
-          </a>
+          {isSuperAdmin && (
+            <a
+              href="/admin/games/new"
+              className="bg-primary hover:bg-primary/90 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-all active:scale-[0.98]"
+            >
+              + Add Game
+            </a>
+          )}
         </div>
 
         {/* ── Stat cards ── */}
         {stats && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <StatCard label="Total Revenue"   value={`₱${stats.totalRevenue.toLocaleString()}`} icon="💰" color="bg-primary" />
-            <StatCard label="Tickets Sold"    value={stats.totalSold.toLocaleString()}           icon="🎟️" color="bg-offblack" />
+            <StatCard label="Passes Sold"     value={stats.totalSold.toLocaleString()}           icon="🎟️" color="bg-offblack" />
             <StatCard label="Upcoming Games"  value={stats.upcomingGames.toLocaleString()}        icon="📅" color="bg-primary" />
             <StatCard label="Trending Games"  value={stats.trendingGames.toLocaleString()}        icon="🔥" color="bg-danger" />
           </div>
@@ -172,9 +177,11 @@ export default function AdminDashboard() {
           {games.length === 0 ? (
             <div className="px-6 py-12 text-center">
               <p className="text-offblack/40 text-sm mb-3">No games yet.</p>
-              <a href="/admin/games/new" className="text-primary text-sm font-bold hover:underline">
-                + Add your first game
-              </a>
+              {isSuperAdmin && (
+                <a href="/admin/games/new" className="text-primary text-sm font-bold hover:underline">
+                  + Add your first game
+                </a>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -184,7 +191,7 @@ export default function AdminDashboard() {
                     <th className="text-left px-6 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Game</th>
                     <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Date</th>
                     <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Venue</th>
-                    <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Tickets Sold</th>
+                    <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Passes Sold</th>
                     <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Remaining</th>
                     <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Revenue</th>
                     <th className="text-right px-6 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Actions</th>
@@ -261,8 +268,8 @@ export default function AdminDashboard() {
 
                         {/* Actions */}
                         <td className="px-6 py-4 text-right">
-                          {isConfirming ? (
-                            /* Delete confirmation */
+                          {isSuperAdmin && isConfirming ? (
+                            /* Delete confirmation — super_admin only */
                             <div className="flex items-center justify-end gap-2">
                               <span className="text-xs text-offblack/50 mr-1">Delete?</span>
                               <button
@@ -281,25 +288,28 @@ export default function AdminDashboard() {
                               </button>
                             </div>
                           ) : (
-                            /* Normal actions */
                             <div className="flex items-center justify-end gap-3">
-                              <a
-                                href={`/admin/games/${game._id}/edit`}
-                                className="text-xs font-bold text-offblack/50 hover:text-offblack transition-colors"
-                              >
-                                Edit
-                              </a>
-                              <button
-                                onClick={() => setConfirmDeleteId(game._id)}
-                                className="text-xs font-bold text-danger/60 hover:text-danger transition-colors"
-                              >
-                                Delete
-                              </button>
+                              {isSuperAdmin && (
+                                <>
+                                  <a
+                                    href={`/admin/games/${game._id}/edit`}
+                                    className="text-xs font-bold text-offblack/50 hover:text-offblack transition-colors"
+                                  >
+                                    Edit
+                                  </a>
+                                  <button
+                                    onClick={() => setConfirmDeleteId(game._id)}
+                                    className="text-xs font-bold text-danger/60 hover:text-danger transition-colors"
+                                  >
+                                    Delete
+                                  </button>
+                                </>
+                              )}
                               <a
                                 href={`/admin/games/${game._id}/tickets`}
                                 className="text-xs font-bold text-primary hover:text-primary/70 transition-colors whitespace-nowrap"
                               >
-                                Manage Tickets
+                                Manage Passes
                               </a>
                             </div>
                           )}

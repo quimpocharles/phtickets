@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 // Pages that render full-screen without the sidebar shell
 const BARE_ROUTES = ['/admin/login', '/admin/setup'];
 
-type NavItem = { label: string; href: string; exact?: boolean; icon: React.ReactElement };
+type NavItem = { label: string; href: string; exact?: boolean; icon: React.ReactElement; superAdminOnly?: boolean };
 type NavGroup = { section: string; superAdminOnly?: boolean; items: NavItem[] };
 
 const NAV: NavGroup[] = [
@@ -44,6 +44,7 @@ const NAV: NavGroup[] = [
       {
         label: 'Add Game',
         href: '/admin/games/new',
+        superAdminOnly: true,
         icon: (
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -53,6 +54,7 @@ const NAV: NavGroup[] = [
       {
         label: 'Teams',
         href: '/admin/teams',
+        superAdminOnly: true,
         icon: (
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round"
@@ -76,8 +78,9 @@ const NAV: NavGroup[] = [
         ),
       },
       {
-        label: 'Find Tickets',
+        label: 'Find Passes',
         href: '/admin/tickets/find',
+        superAdminOnly: true,
         icon: (
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
@@ -129,6 +132,7 @@ const NAV: NavGroup[] = [
       {
         label: 'EOD Recipients',
         href: '/admin/reports/recipients',
+        superAdminOnly: true,
         icon: (
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round"
@@ -189,35 +193,43 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 flex flex-col gap-6">
-          {NAV.filter((group) => !group.superAdminOnly || adminRole === 'super_admin').map((group) => (
-            <div key={group.section}>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-offblack/30 px-2 mb-1.5">
-                {group.section}
-              </p>
-              <ul className="flex flex-col gap-0.5">
-                {group.items.map((item) => {
-                  const active = isActive(item.href, item.exact);
-                  return (
-                    <li key={item.href + item.label}>
-                      <a
-                        href={item.href}
-                        className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors
-                          ${active
-                            ? 'bg-primary text-white'
-                            : 'text-offblack/60 hover:text-offblack hover:bg-offwhite'
-                          }`}
-                      >
-                        <span className={active ? 'text-white' : 'text-offblack/40'}>
-                          {item.icon}
-                        </span>
-                        {item.label}
-                      </a>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
+          {NAV
+            .filter((group) => !group.superAdminOnly || adminRole === 'super_admin')
+            .map((group) => {
+              const visibleItems = group.items.filter(
+                (item) => !item.superAdminOnly || adminRole === 'super_admin'
+              );
+              if (visibleItems.length === 0) return null;
+              return (
+                <div key={group.section}>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-offblack/30 px-2 mb-1.5">
+                    {group.section}
+                  </p>
+                  <ul className="flex flex-col gap-0.5">
+                    {visibleItems.map((item) => {
+                      const active = isActive(item.href, item.exact);
+                      return (
+                        <li key={item.href + item.label}>
+                          <a
+                            href={item.href}
+                            className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                              ${active
+                                ? 'bg-primary text-white'
+                                : 'text-offblack/60 hover:text-offblack hover:bg-offwhite'
+                              }`}
+                          >
+                            <span className={active ? 'text-white' : 'text-offblack/40'}>
+                              {item.icon}
+                            </span>
+                            {item.label}
+                          </a>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
+            })}
         </nav>
 
         {/* Sign out */}
