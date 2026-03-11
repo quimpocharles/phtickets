@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: Props) {
     `${dateRange} at ${game.venue}. Secure checkout via Maya — no log-in needed. ` +
     `Visa, Mastercard, JCB, Amex & QR Ph accepted.`;
   const image = game.bannerImage ?? '/gh-marquee.png';
-  const pageUrl = `${APP_URL}/tickets/${game._id}`;
+  const pageUrl = `${APP_URL}/passes/${game._id}`;
 
   return {
     title,
@@ -123,7 +123,7 @@ export default async function GameDetailPage({ params }: Props) {
     },
     sponsor: { '@type': 'Organization', name: 'Smart Communications' },
     sport: 'Basketball',
-    url: `${APP_URL}/tickets/${game._id}`,
+    url: `${APP_URL}/passes/${game._id}`,
     offers: game.ticketTypes.map((tt) => ({
       '@type': 'Offer',
       name: tt.name,
@@ -132,7 +132,7 @@ export default async function GameDetailPage({ params }: Props) {
       availability: tt.available > 0
         ? 'https://schema.org/InStock'
         : 'https://schema.org/SoldOut',
-      url: `${APP_URL}/tickets/${game._id}`,
+      url: `${APP_URL}/passes/${game._id}`,
       validFrom: game.createdAt,
       seller: { '@type': 'Organization', name: 'Global Hoops International' },
     })),

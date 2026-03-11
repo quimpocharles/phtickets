@@ -50,10 +50,10 @@ export default function Navbar() {
 
           {/* Right — desktop link / mobile burger */}
           <Link
-            href="/tickets/find"
+            href="/passes/find"
             className="hidden sm:block text-sm font-semibold text-white/50 hover:text-white transition-colors whitespace-nowrap"
           >
-            Find My Tickets
+            Find My Passes
           </Link>
 
           <button
@@ -72,11 +72,11 @@ export default function Navbar() {
         {menuOpen && (
           <div className="sm:hidden border-t border-white/10 py-3">
             <Link
-              href="/tickets/find"
+              href="/passes/find"
               onClick={() => setMenuOpen(false)}
               className="block text-sm font-semibold text-white/60 hover:text-white transition-colors py-1"
             >
-              Find My Tickets
+              Find My Passes
             </Link>
           </div>
         )}

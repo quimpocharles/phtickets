@@ -15,6 +15,13 @@ const nextConfig = {
       { protocol: 'https', hostname: 'res.cloudinary.com' },
     ],
   },
+  async redirects() {
+    return [
+      { source: '/tickets', destination: '/passes', permanent: true },
+      { source: '/tickets/find', destination: '/passes/find', permanent: true },
+      { source: '/tickets/:gameId', destination: '/passes/:gameId', permanent: true },
+    ];
+  },
 };
 
 export default withPWA(nextConfig);

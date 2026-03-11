@@ -30,7 +30,7 @@ export default function GameCard({ game }: Props) {
 
   return (
     <Link
-      href={`/tickets/${game._id}`}
+      href={`/passes/${game._id}`}
       className="group block rounded-2xl overflow-hidden shadow-sm border border-black/5 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
     >
       {/* ── Mobile: vertical poster card ── */}
@@ -76,7 +76,7 @@ export default function GameCard({ game }: Props) {
               </span>
             )}
             <span className="bg-yellow-400 text-black text-xs font-bold px-3 py-1.5 rounded-lg ml-auto">
-              Get Tickets →
+              Get Passes →
             </span>
           </div>
         </div>
@@ -131,10 +131,10 @@ export default function GameCard({ game }: Props) {
                 From <span className="font-bold text-offblack">₱{lowestPrice.toLocaleString()}</span>
               </p>
             ) : (
-              <p className="text-sm text-offblack/40">No tickets listed</p>
+              <p className="text-sm text-offblack/40">No passes listed</p>
             )}
             <span className="text-xs font-bold text-primary group-hover:underline">
-              Get Tickets →
+              Get Passes →
             </span>
           </div>
         </div>

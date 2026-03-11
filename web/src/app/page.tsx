@@ -5,10 +5,10 @@ export default async function Home() {
   try {
     const games = await getGames();
     if (games.length > 0) {
-      redirect(`/tickets/${games[0]._id}`);
+      redirect(`/passes/${games[0]._id}`);
     }
   } catch {
     // fall through if API is unreachable
   }
-  redirect('/tickets');
+  redirect('/passes');
 }
