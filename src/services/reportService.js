@@ -1,31 +1,38 @@
 const Order   = require('../models/Order');
 const ScanLog = require('../models/ScanLog');
 
+const PH_OFFSET_MS = 8 * 60 * 60 * 1000;
+
 /**
- * Returns the start and end of today in UTC, calculated using Asia/Manila (UTC+8).
- *
- * @returns {{ startUtc: Date, endUtc: Date, labelPh: string }}
+ * Returns the UTC window and PH label for a given date.
+ * @param {string} [dateStr] - 'YYYY-MM-DD' in PHT. Defaults to today PHT.
+ * @returns {{ startUtc: Date, endUtc: Date, labelPh: string, dateStr: string }}
  */
-function getTodayRangePh() {
-  const phOffsetMs = 8 * 60 * 60 * 1000;
-  const phNow      = new Date(Date.now() + phOffsetMs);
+function getDateRangePh(dateStr) {
+  let year, month, day;
 
-  // Midnight and end-of-day in PH time, expressed as UTC instants
-  const startUtc = new Date(
-    Date.UTC(phNow.getUTCFullYear(), phNow.getUTCMonth(), phNow.getUTCDate(), 0, 0, 0, 0)
-    - phOffsetMs
-  );
-  const endUtc = new Date(
-    Date.UTC(phNow.getUTCFullYear(), phNow.getUTCMonth(), phNow.getUTCDate(), 23, 59, 59, 999)
-    - phOffsetMs
-  );
+  if (dateStr) {
+    [year, month, day] = dateStr.split('-').map(Number);
+  } else {
+    const phNow = new Date(Date.now() + PH_OFFSET_MS);
+    year  = phNow.getUTCFullYear();
+    month = phNow.getUTCMonth() + 1;
+    day   = phNow.getUTCDate();
+  }
 
-  const labelPh = phNow.toLocaleDateString('en-PH', {
-    timeZone: 'Asia/Manila',
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-  });
+  const startUtc = new Date(Date.UTC(year, month - 1, day,  0,  0,  0,   0) - PH_OFFSET_MS);
+  const endUtc   = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999) - PH_OFFSET_MS);
 
-  return { startUtc, endUtc, labelPh };
+  const labelPh = new Date(startUtc.getTime() + PH_OFFSET_MS)
+    .toLocaleDateString('en-PH', {
+      timeZone: 'Asia/Manila',
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    });
+
+  const pad = (n) => String(n).padStart(2, '0');
+  const resolvedDateStr = dateStr ?? `${year}-${pad(month)}-${pad(day)}`;
+
+  return { startUtc, endUtc, labelPh, dateStr: resolvedDateStr };
 }
 
 /**
@@ -63,8 +70,11 @@ function getTodayRangePh() {
  * @property {number} quantitySold
  * @property {number} revenue
  */
-async function generateDailyTransactionReport() {
-  const { startUtc, endUtc, labelPh } = getTodayRangePh();
+/**
+ * @param {string} [dateStr] - 'YYYY-MM-DD' PHT. Defaults to today PHT.
+ */
+async function generateDailyTransactionReport(dateStr) {
+  const { startUtc, endUtc, labelPh, dateStr: resolvedDate } = getDateRangePh(dateStr);
 
   const orders = await Order.find({
     paymentStatus: 'paid',
@@ -149,6 +159,7 @@ async function generateDailyTransactionReport() {
 
   return {
     date:               labelPh,
+    dateStr:            resolvedDate,
     startUtc,
     endUtc,
     totalRevenue,
