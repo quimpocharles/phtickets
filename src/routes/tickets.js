@@ -16,6 +16,7 @@ const {
 } = require('../models/TicketReservation');
 const { createCheckout } = require('../services/paymongo');
 const { generateOrderNumber } = require('../utils/orderNumber');
+const PendingCheckout = require('../models/PendingCheckout');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /tickets/reserve
@@ -239,6 +240,23 @@ router.post('/purchase', async (req, res) => {
         expiresAt:  new Date(Date.now() + CHECKOUT_WINDOW_SECONDS * 1000),
       }
     );
+
+    // Durably record the checkout so the reconciliation cron can recover
+    // if the PayMongo webhook never fires (network issue, server down, etc.)
+    PendingCheckout.create({
+      cartId,
+      checkoutId:  checkout.checkoutId,
+      buyerEmail,
+      buyerPhone,
+      buyerName:   buyerName || null,
+      country:     country   || null,
+      gameId:      reservations[0].gameId,
+      items:       reservations.map((r, i) => ({
+        reservationId: r._id,
+        ticketTypeId:  normalizedItems[i].ticketTypeId,
+        quantity:      normalizedItems[i].quantity,
+      })),
+    }).catch((err) => console.error('[purchase] PendingCheckout save failed:', err.message));
 
     return res.status(201).json({
       success: true,

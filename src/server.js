@@ -3,6 +3,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const app = require('./app');
 const { scheduleEodReport } = require('./jobs/eodReport');
+const { scheduleReconciliation } = require('./jobs/reconciliation');
 
 const PORT = process.env.PORT || 3000;
 
@@ -39,8 +40,9 @@ mongoose
   .then(() => {
     console.log('MongoDB connected');
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-    scheduleEodReport(); // start background cron after DB is ready
-    startKeepAlive();    // prevent Render spin-down
+    scheduleEodReport();       // start background cron after DB is ready
+    scheduleReconciliation();  // detect + recover missed webhook payments
+    startKeepAlive();          // prevent Render spin-down
   })
   .catch((err) => {
     console.error('MongoDB connection error:', err.message);

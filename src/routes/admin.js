@@ -740,16 +740,42 @@ router.get('/orders/search', async (req, res) => {
 
 router.get('/orders', async (req, res) => {
   try {
+    const page  = Math.max(1, parseInt(req.query.page,  10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 25));
+    const skip  = (page - 1) * limit;
+
     const filter = { paymentStatus: 'paid' };
     if (req.query.gameId) filter.gameId = req.query.gameId;
+    if (req.query.q) {
+      const regex = new RegExp(req.query.q.trim(), 'i');
+      filter.$or = [
+        { buyerName:   regex },
+        { buyerEmail:  regex },
+        { orderNumber: regex },
+        { buyerPhone:  { $regex: req.query.q.trim() } },
+      ];
+    }
 
-    const orders = await Order.find(filter)
-      .populate('gameId',      'description venue gameDate')
-      .populate('ticketTypeId', 'name price')
-      .sort({ createdAt: -1 })
-      .limit(200);
+    const [orders, total] = await Promise.all([
+      Order.find(filter)
+        .populate('gameId',      'description venue gameDate')
+        .populate('ticketTypeId', 'name price')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Order.countDocuments(filter),
+    ]);
 
-    return res.json({ success: true, data: orders });
+    return res.json({
+      success: true,
+      data: orders,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+    });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }

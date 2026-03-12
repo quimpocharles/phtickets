@@ -5,6 +5,7 @@ const Order = require('../models/Order');
 const TicketType = require('../models/TicketType');
 const TicketReservation = require('../models/TicketReservation');
 const Game = require('../models/Game');
+const PendingCheckout = require('../models/PendingCheckout');
 const { getPaymentStatus } = require('../services/paymongo');
 const { generateTickets } = require('../utils/generateTickets');
 const { sendTicketEmail, sendTransactionNotification } = require('../services/mailer');
@@ -219,6 +220,12 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         allTickets,
       }).catch((err) => console.error('[mailer] transaction notification:', err.message));
 
+      // ── Step 12: Mark PendingCheckout as processed ────────────────────────
+      PendingCheckout.findOneAndUpdate(
+        { cartId },
+        { status: 'processed', processedAt: new Date() }
+      ).catch((err) => console.error('[webhook] PendingCheckout update failed:', err.message));
+
       return res.json({ success: true, message: 'Payment confirmed. Passes generated.' });
     }
 
@@ -411,6 +418,12 @@ router.post('/process/:cartId', async (req, res) => {
       grandTotal,
       allTickets,
     }).catch((err) => console.error('[mailer] transaction notification:', err.message));
+
+    // Mark PendingCheckout as processed
+    PendingCheckout.findOneAndUpdate(
+      { cartId },
+      { status: 'processed', processedAt: new Date() }
+    ).catch((err) => console.error('[process] PendingCheckout update failed:', err.message));
 
     // Build response in same shape as /order/cart/:cartId
     const ticketsByOrder = new Map();

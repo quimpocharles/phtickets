@@ -14,17 +14,18 @@
 10. [Availability Calculation](#availability-calculation)
 11. [Urgency & Scarcity Indicators](#urgency--scarcity-indicators)
 12. [Payment Webhook](#payment-webhook)
-13. [Ticket Generation](#ticket-generation)
-14. [Notifications](#notifications)
-15. [QR Scanner](#qr-scanner)
-16. [Gate Reconciliation](#gate-reconciliation)
-17. [End-of-Day Report](#end-of-day-report)
-18. [Admin Dashboard](#admin-dashboard)
-19. [Frontend Pages & Components](#frontend-pages--components)
-20. [Security](#security)
-21. [Database Indexes](#database-indexes)
-22. [Seeding Mock Orders](#seeding-mock-orders)
-23. [Deployment](#deployment)
+13. [Webhook Reconciliation](#webhook-reconciliation)
+14. [Ticket Generation](#ticket-generation)
+15. [Notifications](#notifications)
+16. [QR Scanner](#qr-scanner)
+17. [Gate Reconciliation](#gate-reconciliation)
+18. [End-of-Day Report](#end-of-day-report)
+19. [Admin Dashboard](#admin-dashboard)
+20. [Frontend Pages & Components](#frontend-pages--components)
+21. [Security](#security)
+22. [Database Indexes](#database-indexes)
+23. [Seeding Mock Orders](#seeding-mock-orders)
+24. [Deployment](#deployment)
 
 ---
 
@@ -77,7 +78,8 @@ ticket-sys/
 │   │   ├── Admin.js            # Admin user (email, bcrypt password, role)
 │   │   ├── ScanLog.js          # Gate scan audit (result per scan attempt)
 │   │   ├── ReportRecipient.js  # EOD report mailing list
-│   │   └── ReportLog.js        # Tracks successful EOD sends by date (rescue cron)
+│   │   ├── ReportLog.js        # Tracks successful EOD sends by date (rescue cron)
+│   │   └── PendingCheckout.js  # Durable checkout record for webhook reconciliation
 │   ├── routes/
 │   │   ├── games.js            # GET /games (public)
 │   │   ├── tickets.js          # POST /tickets/purchase; GET /verify/:id, /find
@@ -93,7 +95,8 @@ ticket-sys/
 │   │   ├── reportService.js    # generateDailyTransactionReport(dateStr?)
 │   │   └── gateReconciliationService.js  # generateGateReconciliationReport
 │   ├── jobs/
-│   │   └── eodReport.js        # Crons: 23:59 PHT (primary) + 05:00 PHT (rescue)
+│   │   ├── eodReport.js        # Crons: 23:59 PHT (primary) + 05:00 PHT (rescue)
+│   │   └── reconciliation.js   # Cron: every 15 min — detects + recovers missed webhook payments
 │   ├── templates/
 │   │   └── eodReportTemplate.js# HTML + plain-text EOD email renderer
 │   └── utils/
@@ -386,6 +389,31 @@ TTL constants:
 
 Used by the 05:00 PHT rescue cron to detect whether the 23:59 primary cron fired successfully. If no entry exists for yesterday, the rescue cron sends the missed report.
 
+### PendingCheckout
+
+```js
+{
+  cartId:     String (unique),    // UUID — links to TicketReservations and PayMongo checkout
+  checkoutId: String,             // PayMongo checkout session ID
+  buyerEmail: String,
+  buyerPhone: String,
+  buyerName:  String,
+  country:    String,
+  gameId:     ObjectId → Game,
+  items: [{
+    reservationId: ObjectId,      // the TicketReservation._id (retained even after TTL deletion)
+    ticketTypeId:  ObjectId,
+    quantity:      Number,
+  }],
+  status:      'pending' | 'processed' | 'failed',
+  processedAt: Date,
+  createdAt:   Date,
+}
+// Index: (status, createdAt)
+```
+
+Created in `POST /tickets/purchase` immediately after the PayMongo checkout URL is returned. Survives `TicketReservation` TTL expiry — provides the reconciliation cron with enough data to recreate Orders and Tickets even if the original reservation documents have been deleted. Marked `processed` by the webhook or `/process` handler on success; marked `failed` by the reconciliation cron if PayMongo reports the checkout as expired.
+
 ---
 
 ## API Reference
@@ -424,7 +452,7 @@ Used by the 05:00 PHT rescue cron to detect whether the 23:59 primary cron fired
 | POST | `/admin/games/:gameId/tickets` | Add ticket type |
 | PATCH | `/admin/games/:gameId/tickets/:ticketTypeId` | Edit ticket type (requires `__v` for OCC) |
 | DELETE | `/admin/games/:gameId/tickets/:ticketTypeId` | Delete ticket type |
-| GET | `/admin/orders` | List all paid orders |
+| GET | `/admin/orders` | Paginated paid orders. Query params: `?page=` `?limit=` (max 100, default 25) `?q=` (search name/email/order#/phone) `?gameId=`. Returns `{ data, meta: { total, page, limit, totalPages } }` |
 | GET | `/admin/reports/gate/:gameId` | Gate reconciliation report |
 | GET | `/admin/reports/gate/:gameId/export` | Gate scan log CSV download |
 | GET | `/admin/report-recipients` | List EOD email recipients |
@@ -443,6 +471,7 @@ Used by the 05:00 PHT rescue cron to detect whether the 23:59 primary cron fired
    - Creates TicketReservation (status=reserved, expiresAt=+5 min)
    - Calls Maya createCheckout (totalAmount in centavos)
    - Extends reservation expiresAt to +30 min, stores checkoutId
+   - Saves a PendingCheckout doc (durable record for reconciliation)
    - Returns { reservationId, expiresAt, checkoutId, checkoutUrl }
          ↓
 3. Frontend redirects buyer to checkoutUrl (Maya-hosted payment page)
@@ -511,6 +540,33 @@ The webhook is the single authoritative state machine for payment outcomes.
 **Always return 200**: The webhook handler must always return HTTP 200, even on signature failure or internal errors. Returning 4xx/5xx causes PayMongo to retry and eventually disable the webhook endpoint. Errors are logged server-side instead.
 
 **Dev bypass**: `POST /payments/process/:cartId` is available only when `NODE_ENV=development`. It skips PayMongo verification and processes the cart directly — used for seeding test orders and local end-to-end testing.
+
+**Reconciliation**: Both the webhook and `/process` handler mark the corresponding `PendingCheckout` as `processed` on success. If neither fires (server down, network error, DB failure), the reconciliation cron detects and recovers the payment — see [Webhook Reconciliation](#webhook-reconciliation).
+
+---
+
+## Webhook Reconciliation
+
+`src/jobs/reconciliation.js` — runs every 15 minutes via `node-cron`.
+
+Addresses the scenario where a buyer's payment succeeds in PayMongo but the webhook never fires (server restart, network failure, DB error mid-processing). Without recovery, the buyer is charged but receives no passes, no email, and no SMS.
+
+### How it works
+
+1. **`POST /tickets/purchase`** saves a `PendingCheckout` doc (`status: 'pending'`) alongside the PayMongo checkout — a durable record that survives `TicketReservation` TTL expiry.
+2. The webhook and `/process` handler both mark `PendingCheckout.status = 'processed'` on success.
+3. Every 15 minutes the reconciliation cron queries `PendingCheckout` docs where:
+   - `status = 'pending'`
+   - `createdAt` is between 15 minutes and 24 hours ago (15 min grace period for the webhook to fire)
+4. For each unprocessed checkout:
+   - Calls `getPaymentStatus(checkoutId)` against PayMongo
+   - **`PAYMENT_SUCCESS`** → creates any missing Orders and Tickets, sends email + SMS + transaction notification, marks `processed`
+   - **`PAYMENT_EXPIRED`** → marks `failed`, releases any live reservations
+   - Still pending → leaves for the next cycle
+
+### Idempotency
+
+Per-item `Order.findOne({ reservationId })` check before each Order creation prevents duplicates even if the webhook and the reconciliation cron overlap. The `reservationId` values are stored on `PendingCheckout.items` and remain valid foreign keys on Order documents even after the source `TicketReservation` docs are TTL-deleted.
 
 ---
 
@@ -743,6 +799,7 @@ Indexes are defined at the bottom of each model file and created automatically b
 | `Order` | `reservationId`, `gameId`, `(buyerEmail, buyerPhone)` compound |
 | `Ticket` | `ticketId` (unique), `orderId`, `gameId` |
 | `ScanLog` | `ticketId`, `gameId` |
+| `PendingCheckout` | `(status, createdAt)` compound |
 
 ---
 
