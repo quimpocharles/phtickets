@@ -30,9 +30,9 @@
 
 ## Overview
 
-A full-stack basketball ticketing platform built for Global Hoops International. Fans browse upcoming games, select ticket types, and pay via Maya. Upon successful payment, individual QR-coded tickets are generated, uploaded to Cloudinary, and delivered by email and SMS.
+A full-stack basketball pass platform built for Global Hoops International. Fans browse upcoming games, select pass types, and pay via PayMongo. Upon successful payment, individual QR-coded passes are generated, uploaded to Cloudinary, and delivered by email and SMS.
 
-Admin staff manage games, teams, and ticket types through a protected dashboard. Gate staff scan QR codes at the venue using a real-time camera scanner. Administrators receive automated End-of-Day transaction reports by email with a CSV attachment.
+Admin staff manage games, teams, and pass types through a protected dashboard. Gate staff scan QR codes at the venue using a real-time camera scanner. Administrators receive automated End-of-Day transaction reports by email with a CSV attachment, plus an immediate notification email on every confirmed purchase.
 
 ---
 
@@ -50,10 +50,10 @@ Admin staff manage games, teams, and ticket types through a protected dashboard.
 └───┬────────────────┬────────────────────┬────────────────────────┘
     │                │                    │
     ▼                ▼                    ▼
-MongoDB Atlas    Cloudinary           Maya PH
+MongoDB Atlas    Cloudinary           PayMongo PH
 (Mongoose)    (banners, logos,      (payment gateway)
                QR codes)                 │ webhook
-                                  Nodemailer + Semaphore
+                                  Resend + Semaphore
                                (email + SMS on payment success)
 ```
 
@@ -68,31 +68,32 @@ ticket-sys/
 │   ├── app.js                  # Express app: routes, CORS, middleware
 │   ├── models/
 │   │   ├── Team.js             # Team (name, monicker, logo)
-│   │   ├── Game.js             # Game (teamA/teamB refs, venue, gameDate, banner)
-│   │   ├── TicketType.js       # Ticket tier (name, price, quantity, sold)
+│   │   ├── Game.js             # Game (description, venue, gameDate, banner)
+│   │   ├── TicketType.js       # Pass tier (name, price, quantity, sold)
 │   │   ├── Order.js            # Purchase record (buyer info, amount, payment status)
-│   │   ├── Ticket.js           # Individual ticket (ticketId, QR URL, status)
+│   │   ├── Ticket.js           # Individual pass (ticketId, QR URL, status)
 │   │   ├── TicketReservation.js# Seat hold (TTL-based, 5 min → 30 min)
-│   │   ├── Counter.js          # Sequential ticket ID generator
-│   │   ├── Admin.js            # Admin user (email, bcrypt password)
+│   │   ├── Counter.js          # Sequential pass ID generator
+│   │   ├── Admin.js            # Admin user (email, bcrypt password, role)
 │   │   ├── ScanLog.js          # Gate scan audit (result per scan attempt)
-│   │   └── ReportRecipient.js  # EOD report mailing list
+│   │   ├── ReportRecipient.js  # EOD report mailing list
+│   │   └── ReportLog.js        # Tracks successful EOD sends by date (rescue cron)
 │   ├── routes/
 │   │   ├── games.js            # GET /games (public)
-│   │   ├── tickets.js          # POST /tickets/reserve, /purchase; GET /verify/:id
-│   │   ├── payments.js         # POST /payments/webhook (Maya)
+│   │   ├── tickets.js          # POST /tickets/purchase; GET /verify/:id, /find
+│   │   ├── payments.js         # POST /payments/webhook (PayMongo)
 │   │   └── admin.js            # All /admin/* endpoints (JWT-protected)
 │   ├── middleware/
-│   │   └── adminAuth.js        # JWT verification middleware
+│   │   └── adminAuth.js        # JWT verification + role middleware
 │   ├── services/
 │   │   ├── cloudinary.js       # uploadBanner, uploadTeamLogo, uploadQRCode
-│   │   ├── maya.js             # createCheckout, getPaymentStatus
-│   │   ├── mailer.js           # sendTicketEmail
+│   │   ├── paymongo.js         # createCheckout, getPaymentStatus (PayMongo)
+│   │   ├── mailer.js           # sendTicketEmail, sendTransactionNotification (Resend)
 │   │   ├── sms.js              # sendTicketSMS (Semaphore)
-│   │   ├── reportService.js    # generateDailyTransactionReport
+│   │   ├── reportService.js    # generateDailyTransactionReport(dateStr?)
 │   │   └── gateReconciliationService.js  # generateGateReconciliationReport
 │   ├── jobs/
-│   │   └── eodReport.js        # Cron job: 23:59 PHT — email report + CSV
+│   │   └── eodReport.js        # Crons: 23:59 PHT (primary) + 05:00 PHT (rescue)
 │   ├── templates/
 │   │   └── eodReportTemplate.js# HTML + plain-text EOD email renderer
 │   └── utils/
@@ -109,8 +110,8 @@ ticket-sys/
 │       │   ├── page.tsx                # Home: upcoming games list
 │       │   ├── legal/
 │       │   │   └── page.tsx            # Combined Terms & Conditions + Privacy Policy
-│       │   ├── tickets/
-│       │   │   ├── page.tsx            # Tickets index
+│       │   ├── passes/
+│       │   │   ├── page.tsx            # Passes index
 │       │   │   └── [gameId]/page.tsx   # Game detail + JSON-LD SportsEvent + purchase panel
 │       │   ├── scanner/
 │       │   │   └── page.tsx            # QR camera scanner (ZXing)
@@ -155,8 +156,8 @@ ticket-sys/
 | Authentication | JWT (`jsonwebtoken`) + bcrypt |
 | File uploads | Multer + multer-storage-cloudinary |
 | Image storage | Cloudinary |
-| Payment | Maya PH (paymaya checkout v2) |
-| Email | Nodemailer (SMTP) |
+| Payment | PayMongo (hosted checkout) |
+| Email | Resend API |
 | SMS | Semaphore PH |
 | QR code generation | `qrcode` (Node) |
 | QR code scanning | `@zxing/browser` (browser) |
@@ -172,7 +173,7 @@ ticket-sys/
 
 ```env
 PORT=3000
-NODE_ENV=production            # REQUIRED — controls Maya bypass and error verbosity
+NODE_ENV=production            # REQUIRED — controls PayMongo bypass and error verbosity
 MONGODB_URI=mongodb+srv://<user>:<pass>@cluster.mongodb.net/ticket-sys
 ALLOWED_ORIGIN=https://your-frontend-domain.com   # REQUIRED in production
 
@@ -183,25 +184,20 @@ CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 
-SMTP_HOST=fusion.mxrouting.net
-SMTP_PORT=587
-SMTP_USER=
-SMTP_PASS=
-EMAIL_FROM=noreply@yourdomain.com   # must match SMTP_USER
+RESEND_API_KEY=re_...          # Resend API key — used for EOD reports + transaction notifications
+EMAIL_FROM=noreply@yourdomain.com   # must be from a Resend-verified domain
 
 SEMAPHORE_API_KEY=
 SEMAPHORE_SENDER_NAME=GlobalHoops
 
-MAYA_PUBLIC_KEY=               # pk-... (used for createCheckout)
-MAYA_SECRET_KEY=               # sk-... (used for getPaymentStatus)
-MAYA_BASE_URL=https://pg.maya.ph                  # sandbox: https://pg-sandbox.paymaya.com
-MAYA_WEBHOOK_SECRET=           # REQUIRED in production — HMAC-SHA512 webhook signature key
+PAYMONGO_SECRET_KEY=sk_...     # PayMongo secret key (Basic auth, amounts in centavos)
+PAYMONGO_WEBHOOK_SECRET=       # REQUIRED in production — HMAC-SHA256 webhook signature key
+                               # Must match the mode (test/live) of the registered webhook
 
-APP_BASE_URL=https://your-frontend-domain.com
-EOD_REPORT_RECIPIENTS=admin@example.com,ops@example.com
+RENDER_EXTERNAL_URL=           # Auto-set by Render — enables keep-alive self-ping every 10 min
 ```
 
-> **Note:** `MAYA_WEBHOOK_SECRET` must be set in production. If left empty, webhook signature verification is skipped and any client can fake payment confirmations.
+> **Note:** `PAYMONGO_WEBHOOK_SECRET` must be set in production. If left empty, webhook signature verification is skipped. The key must match the test/live mode of the registered webhook — mismatches cause signature failures and PayMongo will disable the webhook endpoint.
 
 ### Frontend (`web/.env.local`)
 
@@ -376,6 +372,20 @@ TTL constants:
 }
 ```
 
+### ReportLog
+
+```js
+{
+  reportDate:     String (unique),  // 'YYYY-MM-DD' PHT — one doc per calendar day
+  sentAt:         Date,
+  recipientCount: Number,
+  orderCount:     Number,
+  revenue:        Number,
+}
+```
+
+Used by the 05:00 PHT rescue cron to detect whether the 23:59 primary cron fired successfully. If no entry exists for yesterday, the rescue cron sends the missed report.
+
 ---
 
 ## API Reference
@@ -488,17 +498,19 @@ Computed server-side in `GET /games` for each ticket type:
 
 ## Payment Webhook
 
-`POST /payments/webhook` (Maya → server)
+`POST /payments/webhook` (PayMongo → server)
 
 The webhook is the single authoritative state machine for payment outcomes.
 
 **Idempotency**: If a reservation is already `completed` and an Order exists, the webhook returns 200 immediately without re-processing.
 
-**Atomic claim**: The reservation is updated with `findOneAndUpdate` matching `{ status: 'reserved', expiresAt: { $gt: now } }`. If that returns null (already processed or expired), the webhook aborts.
+**Atomic claim**: The reservation is updated with `findOneAndUpdate` matching `{ cartId }` and `status: 'reserved'`. If that returns null (already processed or expired), the webhook aborts.
 
-**Signature verification**: Maya sends an `x-signature` header. The webhook computes `HMAC-SHA512(rawBody, MAYA_WEBHOOK_SECRET)` and uses `crypto.timingSafeEqual()` for comparison. Verification is skipped only when `MAYA_WEBHOOK_SECRET` is not set (local dev only).
+**Signature verification**: PayMongo sends a `paymongo-signature` header in the format `t=<timestamp>,te=<test_hash>,li=<live_hash>`. The webhook computes `HMAC-SHA256(timestamp + "." + rawBody, PAYMONGO_WEBHOOK_SECRET)` and uses `crypto.timingSafeEqual()`. Verification is skipped only when `PAYMONGO_WEBHOOK_SECRET` is not set (local dev only).
 
-**Dev bypass**: `POST /payments/process/:reservationId` is available only when `NODE_ENV=development`. It skips Maya verification and processes the reservation directly — used for seeding test orders and local end-to-end testing.
+**Always return 200**: The webhook handler must always return HTTP 200, even on signature failure or internal errors. Returning 4xx/5xx causes PayMongo to retry and eventually disable the webhook endpoint. Errors are logged server-side instead.
+
+**Dev bypass**: `POST /payments/process/:cartId` is available only when `NODE_ENV=development`. It skips PayMongo verification and processes the cart directly — used for seeding test orders and local end-to-end testing.
 
 ---
 
@@ -518,12 +530,20 @@ Triggered on `PAYMENT_SUCCESS` inside the webhook handler.
 
 ## Notifications
 
-Both are sent asynchronously after ticket generation on payment success.
+All notifications are sent asynchronously (fire-and-forget with `.catch()` logging) after ticket generation on payment success.
 
-### Email (`src/services/mailer.js`)
-- Sent via Nodemailer (SMTP)
-- Contains order number, game details, ticket table with QR code images
-- Sender: `puso-support@codeatcoffee.com`
+### Buyer confirmation email (`src/services/mailer.js` — `sendTicketEmail`)
+- Sent via Resend API
+- Subject: `Your Global Hoops Passes – Order ORD-YYYYMMDD-XXXXX`
+- Contains all purchased passes in a single email — one horizontal card per pass (banner image left, QR + details right)
+- QR codes are hosted Cloudinary URLs (not base64 inline — Gmail blocks `data:` URI images)
+- Sender name: `Global Hoops Passes`; from address: `EMAIL_FROM` env var
+
+### Transaction notification email (`src/services/mailer.js` — `sendTransactionNotification`)
+- Sent via Resend API on every confirmed purchase
+- Addressed to all active `ReportRecipient` entries
+- Contains: game name + date, buyer name + email, passes breakdown (type × qty), total paid, timestamp (Asia/Manila)
+- Allows recipients to monitor sales in real time without waiting for the EOD report
 
 ### SMS (`src/services/sms.js`)
 - Sent via Semaphore PH API
@@ -578,20 +598,37 @@ CSV export: `GET /admin/reports/gate/:gameId/export`
 
 ## End-of-Day Report
 
-Scheduled via `node-cron` at **23:59 Asia/Manila** every day.
+Two crons run in `src/jobs/eodReport.js`, both scoped to `Asia/Manila`:
 
-`generateDailyTransactionReport()`:
-- Queries all `paid` Orders where `createdAt` falls within today (Asia/Manila timezone)
+| Cron | Time | Behaviour |
+|---|---|---|
+| Primary | **23:59 PHT** | Generates and sends today's report; saves a `ReportLog` entry on success |
+| Rescue | **05:00 PHT** | Checks if yesterday has a `ReportLog` entry; sends the missed report if not |
+
+The rescue cron exists because the backend is hosted on Render's free tier, which spins down after 15 minutes of inactivity. If the server was asleep at 23:59, the primary cron never fires — the rescue catches it in the morning.
+
+A keep-alive self-ping (`setInterval`, every 10 minutes) in `src/server.js` hits `GET /health` to prevent spin-down. It only activates when `RENDER_EXTERNAL_URL` is set (injected automatically by Render).
+
+### `generateDailyTransactionReport(dateStr?)`
+- Accepts an optional `'YYYY-MM-DD'` string (PHT). Defaults to today PHT.
+- Queries all `paid` Orders where `createdAt` falls within that day's UTC window
 - Builds `byGame` and `byTicketType` breakdowns
-- Returns totals: revenue, tickets sold, transaction count
+- Aggregates `ScanLog` for the same window: `VALID`, `ALREADY_USED`, `INVALID` counts
+- Returns totals: revenue, passes sold, transaction count, scan stats, `dateStr`
 
-The EOD email:
-- HTML template with summary cards, Sales by Game table, Sales by Ticket Type table
+### EOD email contents
+- HTML template: summary cards, Sales by Game table, Sales by Pass Type table, Scans Today table (Valid / Already Used / Invalid / Total)
 - Plain-text fallback
-- CSV attachment: one row per order (Order ID, Game, Ticket Type, Quantity, Total Amount, Buyer Email, Buyer Phone, Payment Reference, Transaction Date)
+- CSV attachment `transactions-YYYY-MM-DD.csv`: one row per order (Order ID, Game, Pass Type, Quantity, Total Amount, Buyer Email, Buyer Phone, Country, Payment Reference, Transaction Date)
 - Sent to all `ReportRecipient` documents where `active: true`
 
-Recipients are managed via:
+### Manual send
+```bash
+node scripts/send-report-manual.js 2026-03-11
+```
+Sends the report for a specific date (useful for backfilling or testing).
+
+### Recipients managed via
 - `POST /admin/report-recipients` — add recipient
 - `GET /admin/report-recipients` — list recipients
 - `DELETE /admin/report-recipients/:id` — remove recipient
@@ -633,9 +670,9 @@ Protected by JWT stored in `localStorage`. All requests include `Authorization: 
 
 | Route | Description |
 |---|---|
-| `/` | Redirects directly to the active game's ticket page |
-| `/tickets/:gameId` | Game detail: ticket-style banner, purchase panel, reservation countdown |
-| `/tickets/find` | Find My Tickets — lookup by email + phone |
+| `/` | Redirects directly to the active game's pass page |
+| `/passes/:gameId` | Game detail: ticket-style banner, purchase panel, reservation countdown |
+| `/passes/find` | Find My Passes — lookup by email + phone |
 | `/payments/success` | Post-payment success: polls order status, displays QR tickets |
 | `/payments/failure` | Payment failure page |
 | `/payments/cancel` | Payment cancelled page |
@@ -646,7 +683,7 @@ Protected by JWT stored in `localStorage`. All requests include `Authorization: 
 
 | Component | Description |
 |---|---|
-| `Navbar` | Dark pill navbar; Smart logo + "GLOBAL HOOPS INTL/INTERNATIONAL" in Anton font; mobile burger menu reveals Find My Tickets; shrinks on scroll |
+| `Navbar` | Dark pill navbar; Smart logo + "GLOBAL HOOPS INTL/INTERNATIONAL" in Anton font; mobile burger menu reveals Find My Passes; shrinks on scroll |
 | `Footer` | Single-row footer: copyright + Terms & Privacy on left; "Let's get Social!" + Facebook + Instagram links on right |
 | `TicketTypeCard` | Ticket tier card with stacked design, urgency starburst badge, three states (default / selected / sold-out); selected state uses offblack |
 | `TicketPurchasePanel` | Includes game details card (full-width on desktop, compact with portrait image on mobile). Desktop/tablet: two-column layout. Mobile: full-width ticket list + floating blue cart button opens side drawer. Required Terms & Privacy checkbox blocks "Proceed to Payment" until ticked |
@@ -656,7 +693,7 @@ Protected by JWT stored in `localStorage`. All requests include `Authorization: 
 
 ### Banner Design
 
-The game detail page banner (`/tickets/:gameId`) uses a ticket-stub layout:
+The game detail page banner (`/passes/:gameId`) uses a ticket-stub layout:
 - **Left**: off-black background, yellow "Global Hoops International Tickets" label, large white game title, tagline (visible on all screen sizes)
 - **Bottom strip**: scrolling marquee (CSS animation, Anton font) — date chip (yellow) → venue (blue) → "Global Hoops International Showcase" (black); loops infinitely
 - **Right panel**: `smart-gh.jpg` full-cover image, black background; hidden on mobile
@@ -730,16 +767,18 @@ The `ORDERS` array in the script is pre-configured with buyer names, emails, pho
 
 ### Backend
 
-Recommended: any Node.js host (Railway, Render, Fly.io, VPS with PM2).
+Recommended: any Node.js host (Railway, Render, Fly.io, VPS with PM2). Currently deployed on **Render** free tier.
 
 Required env vars for production:
 - `NODE_ENV=production`
 - `MONGODB_URI`
 - `ALLOWED_ORIGIN` (frontend domain)
 - `JWT_SECRET` (32+ random bytes)
-- `MAYA_PUBLIC_KEY`, `MAYA_SECRET_KEY`, `MAYA_BASE_URL=https://pg.maya.ph`
-- `MAYA_WEBHOOK_SECRET`
-- All Cloudinary, SMTP, Semaphore vars
+- `PAYMONGO_SECRET_KEY`, `PAYMONGO_WEBHOOK_SECRET`
+- `RESEND_API_KEY`, `EMAIL_FROM` (must be a Resend-verified domain)
+- All Cloudinary and Semaphore vars
+
+**Render-specific:** `RENDER_EXTERNAL_URL` is injected automatically by Render. When present, the server pings its own `/health` endpoint every 10 minutes to prevent the free-tier spin-down from interrupting the 23:59 PHT EOD cron. Even if a spin-down occurs, the 05:00 PHT rescue cron will catch and send any missed report.
 
 ### Frontend
 
@@ -751,7 +790,7 @@ Deployed on **Vercel** (Next.js App Router). Set these in the Vercel project env
 
 Auto-generated at runtime:
 - `/robots.txt` — blocks `/admin/` and `/scanner/`; links to sitemap
-- `/sitemap.xml` — game pages: priority `1.0`, `hourly`; home: `0.9`, `daily`; `/tickets/find`: `0.4`; `/legal`: `0.2`, `monthly`
+- `/sitemap.xml` — game pages: priority `1.0`, `hourly`; home: `0.9`, `daily`; `/passes/find`: `0.4`; `/legal`: `0.2`, `monthly`
 
 Favicon: `/favico.png` (served from `web/src/app/icon.png` via Next.js App Router convention).
 
@@ -759,9 +798,14 @@ Open Graph and Twitter card metadata are set globally in `layout.tsx` and overri
 
 **OG Image:** `gh-marquee.png` (1200×630) — used as the global and per-game social share image.
 
-**Canonical URLs:** Set via `alternates.canonical` in `generateMetadata()` for each game page (`/tickets/:gameId`).
+**Canonical URLs:** Set via `alternates.canonical` in `generateMetadata()` for each game page (`/passes/:gameId`).
 
-**Custom 404:** `web/src/app/not-found.tsx` — branded page with Smart logo, "Page not found" message, and "Get Tickets →" CTA linking to `/`. Search engines excluded via `robots: { index: false, follow: false }`.
+**Route redirects:** Permanent 301 redirects are configured in `next.config.mjs` for the old `/tickets` URLs:
+- `/tickets` → `/passes`
+- `/tickets/find` → `/passes/find`
+- `/tickets/:gameId` → `/passes/:gameId`
+
+**Custom 404:** `web/src/app/not-found.tsx` — branded page with Smart logo, "Page not found" message, and "Get Passes →" CTA linking to `/`. Search engines excluded via `robots: { index: false, follow: false }`.
 
 ### Structured Data (JSON-LD)
 
@@ -778,7 +822,7 @@ Two schemas are injected server-side via `<script type="application/ld+json">`:
 }
 ```
 
-**SportsEvent** (per game, in `tickets/[gameId]/page.tsx`):
+**SportsEvent** (per game, in `passes/[gameId]/page.tsx`):
 ```json
 {
   "@type": "SportsEvent",
