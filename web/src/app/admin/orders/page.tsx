@@ -11,6 +11,7 @@ interface Order {
   buyerPhone: string;
   quantity: number;
   totalAmount: number;
+  country: string | null;
   paymentStatus: string;
   paymentReference: string;
   createdAt: string;
@@ -155,6 +156,7 @@ export default function AdminOrdersPage() {
                   <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Buyer</th>
                   <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Game</th>
                   <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Pass Type</th>
+                  <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Country</th>
                   <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Qty</th>
                   <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Amount</th>
                   <th className="text-right px-5 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Date</th>
@@ -180,6 +182,9 @@ export default function AdminOrdersPage() {
                     <td className="px-4 py-3 text-offblack/70">
                       {order.ticketTypeId?.name ?? '—'}
                     </td>
+                    <td className="px-4 py-3 text-offblack/70 text-xs font-mono">
+                      {order.country ?? '—'}
+                    </td>
                     <td className="px-4 py-3 text-right font-semibold text-offblack">
                       {order.quantity}
                     </td>
@@ -200,7 +205,7 @@ export default function AdminOrdersPage() {
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-black/10 bg-offwhite/60">
-                  <td colSpan={5} className="px-5 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">
+                  <td colSpan={6} className="px-5 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">
                     Page Total
                   </td>
                   <td className="px-4 py-3 text-right font-black text-offblack">
