@@ -1,6 +1,7 @@
-const fs       = require('fs');
-const path     = require('path');
-const { Resend } = require('resend');
+const fs           = require('fs');
+const path         = require('path');
+const { Resend }   = require('resend');
+const nodemailer   = require('nodemailer');
 const { cloudinary } = require('./cloudinary');
 const ReportRecipient = require('../models/ReportRecipient');
 
@@ -8,6 +9,31 @@ let _resend = null;
 function getResend() {
   if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
   return _resend;
+}
+
+let _smtpTransport = null;
+function getSmtp() {
+  if (!_smtpTransport) {
+    _smtpTransport = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || '587', 10),
+      secure: false,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    });
+  }
+  return _smtpTransport;
+}
+
+async function sendViaResendWithFallback({ from, to, subject, html }) {
+  try {
+    const { error } = await getResend().emails.send({ from, to, subject, html });
+    if (error) throw new Error(error.message);
+    return 'resend';
+  } catch (resendErr) {
+    console.warn('[mailer] Resend failed, falling back to SMTP:', resendErr.message);
+    await getSmtp().sendMail({ from, to, subject, html });
+    return 'smtp';
+  }
 }
 
 // Upload event banner to Cloudinary once; cached in-process
@@ -193,16 +219,14 @@ async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) 
 
   console.log('[mailer] Sending pass email to:', to, '| from:', from);
 
-  const { error } = await getResend().emails.send({
+  const provider = await sendViaResendWithFallback({
     from,
     to,
     subject: `Your Global Hoops Passes – Order ${allTickets[0]?.orderNumber ?? ''}`,
     html,
   });
 
-  if (error) throw new Error(error.message);
-
-  console.log('[mailer] Email sent successfully to:', to);
+  console.log('[mailer] Email sent successfully to:', to, '| via:', provider);
 }
 
 /**
@@ -302,16 +326,14 @@ async function sendTransactionNotification({ game, buyerName, buyerEmail, grandT
 
   const from = `Global Hoops Passes <${process.env.EMAIL_FROM || 'tickets@globalhoops.shop'}>`;
 
-  const { error } = await getResend().emails.send({
+  const provider = await sendViaResendWithFallback({
     from,
     to: recipients,
     subject: `New Sale: ₱${(grandTotal).toLocaleString('en-PH')} — ${game.description}`,
     html,
   });
 
-  if (error) throw new Error(error.message);
-
-  console.log('[mailer] Transaction notification sent to:', recipients.join(', '));
+  console.log('[mailer] Transaction notification sent to:', recipients.join(', '), '| via:', provider);
 }
 
 module.exports = { sendTicketEmail, sendTransactionNotification };
