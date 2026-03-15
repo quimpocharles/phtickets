@@ -24,13 +24,22 @@ function getSmtp() {
   return _smtpTransport;
 }
 
+// Errors that mean Resend accepted/sent the email — do NOT fall back or we'd duplicate
+const RESEND_SENT_ERRORS = ['timeout', 'ECONNRESET', 'ECONNABORTED', 'socket hang up'];
+
 async function sendViaResendWithFallback({ from, to, subject, html }) {
   try {
     const { error } = await getResend().emails.send({ from, to, subject, html });
     if (error) throw new Error(error.message);
     return 'resend';
   } catch (resendErr) {
-    console.warn('[mailer] Resend failed, falling back to SMTP:', resendErr.message);
+    const msg = resendErr.message || '';
+    const likelySent = RESEND_SENT_ERRORS.some(e => msg.toLowerCase().includes(e.toLowerCase()));
+    if (likelySent) {
+      console.warn('[mailer] Resend connection dropped after likely send — skipping fallback to avoid duplicate:', msg);
+      return 'resend-uncertain';
+    }
+    console.warn('[mailer] Resend failed, falling back to SMTP:', msg);
     await getSmtp().sendMail({ from, to, subject, html });
     return 'smtp';
   }
