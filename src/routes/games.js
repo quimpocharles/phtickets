@@ -31,7 +31,7 @@ function getUrgencyBadge(quantity, sold) {
 // (status = "reserved" AND expiresAt > now).
 router.get('/', async (req, res) => {
   try {
-    const games = await Game.find({ gameDate: { $gte: new Date() } })
+    const games = await Game.find({ eventEndDate: { $gte: new Date() } })
       .sort({ gameDate: 1 });
 
     if (games.length === 0) {
