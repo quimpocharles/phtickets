@@ -3,6 +3,7 @@ const Game = require('../models/Game');
 const TicketType = require('../models/TicketType');
 const Ticket = require('../models/Ticket');
 const ScanLog = require('../models/ScanLog');
+const Order = require('../models/Order');
 /**
  * Generates a gate reconciliation report for a specific game.
  *
@@ -42,7 +43,7 @@ async function generateGateReconciliationReport(gameId) {
 
   // ── Run queries in parallel ────────────────────────────────────────────────
 
-  const [ticketTypes, ticketAgg, scanAgg] = await Promise.all([
+  const [ticketTypes, ticketAgg, scanAgg, countryAgg] = await Promise.all([
     // All ticket types for the game (for names)
     TicketType.find({ gameId: gid }).lean(),
 
@@ -67,6 +68,19 @@ async function generateGateReconciliationReport(gameId) {
           count: { $sum: 1 },
         },
       },
+    ]),
+
+    // Per-country tickets sold
+    Order.aggregate([
+      { $match: { gameId: gid, paymentStatus: 'paid' } },
+      {
+        $group: {
+          _id:     '$country',
+          tickets: { $sum: '$quantity' },
+          revenue: { $sum: '$totalAmount' },
+        },
+      },
+      { $sort: { tickets: -1 } },
     ]),
   ]);
 
@@ -100,6 +114,12 @@ async function generateGateReconciliationReport(gameId) {
   const invalidScans   = scanCountMap.get('INVALID')      ?? 0;
   const duplicateScans = scanCountMap.get('ALREADY_USED') ?? 0;
 
+  const byCountry = countryAgg.map((r) => ({
+    country: r._id || 'Unknown',
+    tickets: r.tickets,
+    revenue: r.revenue,
+  }));
+
   return {
     gameId:       game._id.toString(),
     game:         game.description,
@@ -111,6 +131,7 @@ async function generateGateReconciliationReport(gameId) {
     invalidScans,
     duplicateScans,
     byTicketType,
+    byCountry,
   };
 }
 

@@ -11,6 +11,12 @@ interface TicketTypeBreakdown {
   noShows: number;
 }
 
+interface CountryBreakdown {
+  country: string;
+  tickets: number;
+  revenue: number;
+}
+
 interface GateReport {
   gameId: string;
   game: string;
@@ -22,7 +28,21 @@ interface GateReport {
   invalidScans: number;
   duplicateScans: number;
   byTicketType: TicketTypeBreakdown[];
+  byCountry: CountryBreakdown[];
 }
+
+const COUNTRY_NAMES: Record<string, string> = {
+  PH: 'Philippines',
+  US: 'United States',
+  AU: 'Australia',
+  CA: 'Canada',
+  NZ: 'New Zealand',
+  IT: 'Italy',
+  EU: 'Europe',
+  GB: 'United Kingdom',
+  AE: 'UAE',
+  MT: 'Malta',
+};
 
 export default function GateReconciliationPage() {
   const router = useRouter();
@@ -314,6 +334,84 @@ export default function GateReconciliationPage() {
             </div>
           )}
         </div>
+
+        {/* ── Country breakdown ── */}
+        {report.byCountry.length > 0 && (
+          <div className="bg-white rounded-2xl border border-black/8 shadow-sm overflow-hidden mt-6">
+            <div className="px-6 py-4 border-b border-black/8">
+              <h2 className="font-bold text-offblack">Breakdown by Country</h2>
+              <p className="text-xs text-offblack/40 mt-0.5">
+                {report.byCountry.length} countr{report.byCountry.length !== 1 ? 'ies' : 'y'}
+              </p>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-black/6 bg-offwhite/60">
+                    <th className="text-left px-6 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">
+                      Country
+                    </th>
+                    <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">
+                      Tickets
+                    </th>
+                    <th className="text-right px-6 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">
+                      Revenue
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-black/5">
+                  {report.byCountry.map((row) => {
+                    const pct = report.totalSold > 0
+                      ? Math.round((row.tickets / report.totalSold) * 100)
+                      : 0;
+                    return (
+                      <tr key={row.country} className="hover:bg-offwhite/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <p className="font-semibold text-offblack">
+                            {COUNTRY_NAMES[row.country] ?? row.country}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <div className="w-20 h-1 bg-black/8 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-primary"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-offblack/40">{pct}%</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-right font-semibold text-offblack">
+                          {row.tickets.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 text-right font-semibold text-offblack">
+                          ₱{row.revenue.toLocaleString()}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+
+                {report.byCountry.length > 1 && (
+                  <tfoot>
+                    <tr className="border-t-2 border-black/10 bg-offwhite/60">
+                      <td className="px-6 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">
+                        Total
+                      </td>
+                      <td className="px-4 py-3 text-right font-black text-offblack">
+                        {report.totalSold.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-3 text-right font-black text-offblack">
+                        ₱{report.byCountry.reduce((s, r) => s + r.revenue, 0).toLocaleString()}
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* ── Refresh ── */}
         <div className="mt-4 text-center">
