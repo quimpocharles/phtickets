@@ -11,12 +11,6 @@ function getResend() {
   return _resend;
 }
 
-let _resendBackup = null;
-function getResendBackup() {
-  if (!_resendBackup) _resendBackup = new Resend(process.env.RESEND_API_KEY_BACKUP);
-  return _resendBackup;
-}
-
 let _smtpTransport = null;
 function getSmtp() {
   if (!_smtpTransport) {
@@ -34,7 +28,6 @@ function getSmtp() {
 const RESEND_SENT_ERRORS = ['timeout', 'ECONNRESET', 'ECONNABORTED', 'socket hang up'];
 
 async function sendViaResendWithFallback({ from, to, subject, html }) {
-  // Try primary Resend key
   try {
     const { error } = await getResend().emails.send({ from, to, subject, html });
     if (error) throw new Error(error.message);
@@ -46,28 +39,9 @@ async function sendViaResendWithFallback({ from, to, subject, html }) {
       console.warn('[mailer] Resend connection dropped after likely send — skipping fallback to avoid duplicate:', msg);
       return 'resend-uncertain';
     }
-    console.warn('[mailer] Resend (primary) failed:', msg);
-
-    // Try backup Resend key if configured
-    if (process.env.RESEND_API_KEY_BACKUP) {
-      try {
-        const { error: backupError } = await getResendBackup().emails.send({ from, to, subject, html });
-        if (backupError) throw new Error(backupError.message);
-        console.log('[mailer] Sent via backup Resend key');
-        return 'resend-backup';
-      } catch (backupErr) {
-        console.warn('[mailer] Resend (backup) failed, falling back to SMTP:', backupErr.message);
-      }
-    }
-
-    // Final fallback: SMTP
-    try {
-      await getSmtp().sendMail({ from, to, subject, html });
-      return 'smtp';
-    } catch (smtpErr) {
-      console.error('[mailer] SMTP fallback also failed:', smtpErr.message);
-      throw smtpErr;
-    }
+    console.warn('[mailer] Resend failed, falling back to SMTP:', msg);
+    await getSmtp().sendMail({ from, to, subject, html });
+    return 'smtp';
   }
 }
 
