@@ -9,7 +9,7 @@ const SENDER = 'Global Hoops Ticketing System <puso-support@codeatcoffee.com>';
  * @returns {string}
  */
 function eodReportText(report) {
-  const { date, totalRevenue, totalTicketsSold, totalTransactions, byGame, byTicketType, scanStats } = report;
+  const { date, totalRevenue, totalTicketsSold, totalTransactions, byGame, byTicketType, byPaymentMethod, scanStats } = report;
 
   const php     = (n) => `PHP ${Number(n).toLocaleString('en-PH')}`;
   const divider = (char = '-', len = 60) => char.repeat(len);
@@ -33,6 +33,16 @@ function eodReportText(report) {
         `  ${t.ticketType} (${t.game})\n` +
         row('  Qty Sold:', String(t.quantitySold)) + '\n' +
         row('  Revenue:',  php(t.revenue))
+      ).join('\n\n');
+
+  const methodLabel = (m) => m === 'paypal' ? 'PayPal' : 'PayMongo';
+  const methodLines = (byPaymentMethod ?? []).length === 0
+    ? '  No sales recorded for this period.'
+    : (byPaymentMethod ?? []).map((m) =>
+        `  ${methodLabel(m.paymentMethod)}\n` +
+        row('  Transactions:', String(m.transactions)) + '\n' +
+        row('  Passes Sold:',  String(m.ticketsSold)) + '\n' +
+        row('  Revenue:',      php(m.revenue))
       ).join('\n\n');
 
   return [
@@ -60,6 +70,11 @@ function eodReportText(report) {
     typeLines,
     '',
     divider(),
+    'SALES BY PAYMENT METHOD',
+    divider(),
+    methodLines,
+    '',
+    divider(),
     'SCANS',
     divider(),
     row('Valid:',        String(sc.valid)),
@@ -83,7 +98,7 @@ function eodReportText(report) {
  * @returns {{ subject: string, from: string, text: string, html: string }}
  */
 function eodReportTemplate(report) {
-  const { date, totalRevenue, totalTicketsSold, totalTransactions, byGame, byTicketType, scanStats } = report;
+  const { date, totalRevenue, totalTicketsSold, totalTransactions, byGame, byTicketType, byPaymentMethod, scanStats } = report;
   const sc = scanStats ?? { valid: 0, alreadyUsed: 0, invalid: 0, total: 0 };
 
   const subject = `Global Hoops Ticketing System - End of Day Report | ${date}`;
@@ -122,6 +137,23 @@ function eodReportTemplate(report) {
         ${cell(`<span style="font-size:12px;color:#999999;">${t.game}</span>`)}
         ${cell(t.quantitySold.toLocaleString('en-PH'), 'center')}
         ${cell(`<strong>${php(t.revenue)}</strong>`, 'right')}
+      </tr>`).join('');
+
+  // ── Sales by Payment Method rows ─────────────────────────────────────────
+
+  const methodLabel = (m) => m === 'paypal' ? 'PayPal' : 'PayMongo';
+  const methodBadge = (m) => m === 'paypal'
+    ? `<span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#eff6ff;color:#2563eb;font-size:11px;font-weight:700;">PayPal</span>`
+    : `<span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#f3f4f6;color:#6b7280;font-size:11px;font-weight:700;">PayMongo</span>`;
+
+  const methodRows = (byPaymentMethod ?? []).length === 0
+    ? `<tr><td colspan="4" style="padding:16px;text-align:center;color:#aaaaaa;font-size:13px;">No sales recorded for this period.</td></tr>`
+    : (byPaymentMethod ?? []).map((m, i) => `
+      <tr style="background:${i % 2 === 0 ? '#ffffff' : '#fafafa'};">
+        ${cell(methodBadge(m.paymentMethod))}
+        ${cell(m.transactions.toLocaleString('en-PH'), 'center')}
+        ${cell(m.ticketsSold.toLocaleString('en-PH'), 'center')}
+        ${cell(`<strong>${php(m.revenue)}</strong>`, 'right')}
       </tr>`).join('');
 
   // ── HTML ──────────────────────────────────────────────────────────────────
@@ -265,6 +297,24 @@ function eodReportTemplate(report) {
                     <td style="padding:10px 14px;text-align:right;font-weight:700;color:#0133ae;">${php(totalRevenue)}</td>
                   </tr>
                 </tfoot>` : ''}
+              </table>
+
+              <!-- ── Sales by Payment Method ── -->
+              <h2 style="margin:0 0 14px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#0133ae;">
+                Sales by Payment Method
+              </h2>
+              <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eeeeee;border-radius:8px;overflow:hidden;margin-bottom:32px;font-size:13px;">
+                <thead>
+                  <tr>
+                    ${headerCell('Method')}
+                    ${headerCell('Transactions', 'center')}
+                    ${headerCell('Passes Sold', 'center')}
+                    ${headerCell('Revenue', 'right')}
+                  </tr>
+                </thead>
+                <tbody>
+                  ${methodRows}
+                </tbody>
               </table>
 
               <!-- ── Scans ── -->

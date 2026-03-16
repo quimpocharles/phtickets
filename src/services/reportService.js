@@ -142,6 +142,23 @@ async function generateDailyTransactionReport(dateStr) {
 
   const byTicketType = [...typeMap.values()].sort((a, b) => b.revenue - a.revenue);
 
+  // ── Per-payment-method breakdown ──────────────────────────────────────────
+
+  const methodMap = new Map();
+
+  for (const order of orders) {
+    const method = order.paymentMethod ?? 'paymongo';
+    if (!methodMap.has(method)) {
+      methodMap.set(method, { paymentMethod: method, transactions: 0, ticketsSold: 0, revenue: 0 });
+    }
+    const entry = methodMap.get(method);
+    entry.transactions += 1;
+    entry.ticketsSold  += order.quantity;
+    entry.revenue      += order.totalAmount;
+  }
+
+  const byPaymentMethod = [...methodMap.values()].sort((a, b) => b.revenue - a.revenue);
+
   // ── Scan stats ────────────────────────────────────────────────────────────
 
   const scanCounts = await ScanLog.aggregate([
@@ -167,6 +184,7 @@ async function generateDailyTransactionReport(dateStr) {
     totalTransactions,
     byGame,
     byTicketType,
+    byPaymentMethod,
     orders,
     scanStats,
   };
