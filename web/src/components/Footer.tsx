@@ -5,12 +5,19 @@ export default function Footer() {
     <footer className="bg-offblack text-white border-t border-white/8">
       <div className="max-w-6xl mx-auto px-6 py-4 flex flex-wrap items-center justify-center sm:justify-between gap-3">
 
-        {/* Left — copyright + legal */}
+        {/* Left — copyright + legal + support */}
         <div className="flex items-center gap-3 text-xs text-white/30">
           <p>© {new Date().getFullYear()} Global Hoops International.</p>
           <Link href="/legal" className="hover:text-white/60 transition-colors">
             Terms &amp; Privacy
           </Link>
+          <span>·</span>
+          <span>
+            Support:{' '}
+            <a href="mailto:globalhoopsintl@codeatcoffee.com" className="hover:text-white/60 transition-colors">
+              globalhoopsintl@codeatcoffee.com
+            </a>
+          </span>
         </div>
 
         {/* Right — social */}
