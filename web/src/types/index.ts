@@ -55,6 +55,7 @@ export interface PurchaseResponse {
     // PayPal
     paypalOrderId?: string;
     approvalUrl?: string;
+    paypalProcessingFee?: number;
   };
   message?: string;
 }

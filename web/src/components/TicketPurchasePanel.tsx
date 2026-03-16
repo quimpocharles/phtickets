@@ -19,10 +19,11 @@ interface FormState {
 }
 
 interface Reservation {
-  checkoutUrl?: string;   // paymongo
-  approvalUrl?: string;   // paypal
+  checkoutUrl?: string;        // paymongo
+  approvalUrl?: string;        // paypal
   expiresAt: string;
   paymentMethod: 'paymongo' | 'paypal';
+  paypalProcessingFee?: number;
 }
 
 const COUNTRIES = [
@@ -151,10 +152,11 @@ export default function TicketPurchasePanel({ game }: Props) {
         paymentMethod,
       });
       setReservation({
-        checkoutUrl:   res.data.checkoutUrl,
-        approvalUrl:   res.data.approvalUrl,
-        expiresAt:     res.data.expiresAt,
+        checkoutUrl:         res.data.checkoutUrl,
+        approvalUrl:         res.data.approvalUrl,
+        expiresAt:           res.data.expiresAt,
         paymentMethod,
+        paypalProcessingFee: res.data.paypalProcessingFee,
       });
     } catch (err) {
       setApiError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
@@ -248,9 +250,17 @@ export default function TicketPurchasePanel({ game }: Props) {
                       <span className="text-sm text-offblack/60">₱{totalServiceFee.toLocaleString()}</span>
                     </div>
                   )}
+                  {reservation.paypalProcessingFee != null && reservation.paypalProcessingFee > 0 && (
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-sm text-offblack/50">PayPal processing fee</span>
+                      <span className="text-sm text-offblack/60">₱{reservation.paypalProcessingFee.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex items-baseline justify-between border-t border-black/8 pt-2 mt-1">
                     <span className="text-sm font-semibold text-offblack/60">Total</span>
-                    <span className="text-2xl font-black text-offblack">₱{grandTotal.toLocaleString()}</span>
+                    <span className="text-2xl font-black text-offblack">
+                      ₱{(grandTotal + (reservation.paypalProcessingFee ?? 0)).toLocaleString()}
+                    </span>
                   </div>
                 </div>
 
@@ -379,7 +389,9 @@ export default function TicketPurchasePanel({ game }: Props) {
                   }`}
                 >
                   <p className="text-xs font-bold text-offblack">PayPal</p>
-                  <p className="text-[10px] text-offblack/45 mt-0.5">PayPal balance</p>
+                  <p className="text-[10px] text-offblack/45 mt-0.5">
+                    +₱20{form.country && form.country !== 'PH' ? ' +1%' : ''} fee
+                  </p>
                 </button>
               </div>
             </div>

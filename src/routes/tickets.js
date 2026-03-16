@@ -233,9 +233,13 @@ router.post('/purchase', async (req, res) => {
 
     // ── PayPal path ─────────────────────────────────────────────────────────
     if (paymentMethod === 'paypal') {
+      const isInternational  = country && country !== 'PH';
+      const paypalProcessing = Math.round((20 + (isInternational ? totalAmount * 0.01 : 0)) * 100) / 100;
+      const paypalTotal      = Math.round((totalAmount + paypalProcessing) * 100) / 100;
+
       const paypal = await createPayPalOrder({
         referenceNumber: cartId,
-        totalAmountPhp:  totalAmount,
+        totalAmountPhp:  paypalTotal,
         description,
         buyerEmail,
         buyerName,
@@ -266,9 +270,10 @@ router.post('/purchase', async (req, res) => {
         success: true,
         data: {
           cartId,
-          expiresAt:     new Date(Date.now() + CHECKOUT_WINDOW_SECONDS * 1000),
-          paypalOrderId: paypal.paypalOrderId,
-          approvalUrl:   paypal.approvalUrl,
+          expiresAt:          new Date(Date.now() + CHECKOUT_WINDOW_SECONDS * 1000),
+          paypalOrderId:      paypal.paypalOrderId,
+          approvalUrl:        paypal.approvalUrl,
+          paypalProcessingFee: paypalProcessing,
         },
       });
     }
