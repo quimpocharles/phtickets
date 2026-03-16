@@ -15,6 +15,7 @@ const orderSchema = new mongoose.Schema({
     enum: ['pending', 'paid', 'failed', 'refunded'],
     default: 'pending',
   },
+  paymentMethod:    { type: String, enum: ['paymongo', 'paypal'], default: 'paymongo' },
   paymentReference: { type: String, default: null },
   // Links back to the TicketReservation that originated this order.
   reservationId: { type: mongoose.Schema.Types.ObjectId, ref: 'TicketReservation', default: null },

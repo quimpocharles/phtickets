@@ -13,6 +13,7 @@ interface Order {
   totalAmount: number;
   country: string | null;
   paymentStatus: string;
+  paymentMethod: 'paymongo' | 'paypal' | null;
   paymentReference: string;
   createdAt: string;
   gameId: { description: string; venue: string; gameDate: string } | null;
@@ -157,6 +158,7 @@ export default function AdminOrdersPage() {
                   <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Game</th>
                   <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Pass Type</th>
                   <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Country</th>
+                  <th className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Payment</th>
                   <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Qty</th>
                   <th className="text-right px-4 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Amount</th>
                   <th className="text-right px-5 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">Date</th>
@@ -185,6 +187,13 @@ export default function AdminOrdersPage() {
                     <td className="px-4 py-3 text-offblack/70 text-xs font-mono">
                       {order.country ?? '—'}
                     </td>
+                    <td className="px-4 py-3">
+                      {order.paymentMethod === 'paypal' ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-600">PayPal</span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-gray-100 text-gray-500">PayMongo</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-right font-semibold text-offblack">
                       {order.quantity}
                     </td>
@@ -205,7 +214,7 @@ export default function AdminOrdersPage() {
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-black/10 bg-offwhite/60">
-                  <td colSpan={6} className="px-5 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">
+                  <td colSpan={7} className="px-5 py-3 text-xs font-bold uppercase tracking-wide text-offblack/40">
                     Page Total
                   </td>
                   <td className="px-4 py-3 text-right font-black text-offblack">

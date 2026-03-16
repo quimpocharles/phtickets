@@ -157,6 +157,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
           quantity:         reservation.quantity,
           totalAmount,
           paymentStatus:    'paid',
+          paymentMethod:    'paymongo',
           paymentReference: paymongoPayment.id ?? checkoutId,
         });
 
@@ -393,6 +394,7 @@ router.post('/process/:cartId', async (req, res) => {
         quantity:         reservation.quantity,
         totalAmount,
         paymentStatus:    'paid',
+        paymentMethod:    isPayPal ? 'paypal' : 'paymongo',
         paymentReference,
       });
 
@@ -614,6 +616,7 @@ router.post('/paypal/capture', async (req, res) => {
         quantity:         reservation.quantity,
         totalAmount,
         paymentStatus:    'paid',
+        paymentMethod:    'paypal',
         paymentReference: paypalPayment.id ?? paypalOrderId,
       });
 
@@ -808,6 +811,7 @@ router.post('/paypal/webhook', express.raw({ type: 'application/json' }), async 
         quantity:         reservation.quantity,
         totalAmount,
         paymentStatus:    'paid',
+        paymentMethod:    'paypal',
         paymentReference: paypalPayment.id ?? paypalOrderId,
       });
 

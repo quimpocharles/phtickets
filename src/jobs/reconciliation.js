@@ -129,6 +129,7 @@ async function reconcileCart(pending) {
         quantity,
         totalAmount,
         paymentStatus:    'paid',
+        paymentMethod:    paymentMethod === 'paypal' ? 'paypal' : 'paymongo',
         paymentReference: payment.id ?? (paymentMethod === 'paypal' ? paypalOrderId : checkoutId),
       });
     } catch (err) {
