@@ -421,6 +421,13 @@ export default function TicketPurchasePanel({ game }: Props) {
               </span>
             </label>
 
+            <p className="text-xs text-offblack/40 text-center leading-relaxed">
+              All pass purchases are final unless the event is cancelled. For concerns regarding your purchase, please contact{' '}
+              <a href="mailto:globalhoopsintl@codeatcoffee.com" className="underline hover:text-primary transition-colors">
+                our support team
+              </a>.
+            </p>
+
             <button
               type="submit"
               disabled={loading || !agreedToTerms}
