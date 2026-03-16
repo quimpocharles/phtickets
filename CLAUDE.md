@@ -38,13 +38,15 @@ app.js             Express app: CORS, rate limits, route mounting
 routes/
   games.js         GET /games (public)
   tickets.js       POST /reserve, POST /purchase, GET /order/:id, GET /find, GET /verify/:id
-  payments.js      POST /payments/webhook (Maya), POST /payments/process/:id (dev fallback)
+  payments.js      POST /payments/webhook (PayMongo), POST /payments/paypal/capture,
+                   POST /payments/paypal/webhook, POST /payments/process/:id (dev fallback)
   admin.js         /admin/** — JWT-protected CRUD for games, ticket types, orders, reports, teams
 models/            Mongoose schemas: Game, TicketType, Order, Ticket, Counter, ScanLog,
                    TicketReservation, Admin, ReportRecipient, Team
 services/
-  maya.js          createCheckout (MAYA_PUBLIC_KEY), getPaymentStatus (MAYA_SECRET_KEY)
-  mailer.js        sendTicketEmail — base64-inline QR codes via Nodemailer/MXrouting
+  paymongo.js      createCheckout, getPaymentStatus (amounts in centavos)
+  paypal.js        createOrder, captureOrder, getOrderDetails, verifyWebhookSignature (amounts in PHP)
+  mailer.js        sendTicketEmail — Cloudinary URLs via Nodemailer/MXrouting
   sms.js           sendTicketSMS — Semaphore API
   cloudinary.js    uploadQRCode helper
   reportService.js EOD sales report generation
@@ -57,14 +59,24 @@ middleware/adminAuth.js  JWT verification for /admin routes
 
 ### Payment flow (critical path)
 
-1. **`POST /tickets/purchase`** — accepts `{ items: [{ ticketTypeId, quantity }], buyerEmail, buyerPhone, buyerName, country }`. Generates a `cartId` (UUID), runs a MongoDB transaction to check availability and create all `TicketReservation` docs (shared `cartId`, TTL=5min), calls PayMongo `createCheckout` with `cartId` as `reference_number`, extends TTL to 30min, returns `{ cartId, checkoutUrl }`.
-2. **`POST /payments/webhook`** — `reference_number` = `cartId`. HMAC-SHA256 verify (`paymongo-signature` header) → cross-verify with PayMongo API → `TicketReservation.updateMany({ cartId })` to claim all → one `Order` per reservation → `TicketType.sold += qty` → `generateTickets` → one combined email + SMS (non-blocking).
-3. **`POST /payments/process/:cartId`** — client-triggered fallback for local dev when webhooks can't reach localhost. Skips PayMongo API verification only when `NODE_ENV=development`. Returns same shape as `GET /tickets/order/cart/:cartId`.
-4. **`GET /tickets/order/cart/:cartId`** — polled by the success page every 5s; returns `{ game, buyer, grandTotal, orders: [{ orderNumber, ticketTypeName, tickets }] }`. Triggers `/process` after 3 failed polls.
+`POST /tickets/purchase` accepts `paymentMethod: 'paymongo' | 'paypal'` (default `'paymongo'`).
+
+**PayMongo path:**
+1. **`POST /tickets/purchase`** — Generates `cartId`, transaction → `TicketReservation` docs, calls `createCheckout`, returns `{ cartId, checkoutUrl }`.
+2. **`POST /payments/webhook`** — `reference_number` = `cartId`. HMAC-SHA256 verify (`paymongo-signature` header) → cross-verify with PayMongo API → claim reservations → one `Order` per reservation → `sold++` → `generateTickets` → email + SMS.
+3. **`POST /payments/process/:cartId`** — client-triggered fallback for local dev. Skips PayMongo verification only when `NODE_ENV=development`.
+
+**PayPal path:**
+1. **`POST /tickets/purchase`** — Same reservation transaction, then calls PayPal `createOrder` (amounts in PHP, not centavos). Stores `paypalOrderId` on reservations. Returns `{ cartId, approvalUrl }`.
+2. **`POST /payments/paypal/capture`** — Called by success page after PayPal redirects back with `?token=<paypalOrderId>`. Captures the order, claims reservations, creates Orders, generates tickets. Primary happy path.
+3. **`POST /payments/paypal/webhook`** — `PAYMENT.CAPTURE.COMPLETED` event. Reliability layer if client capture fails. `custom_id` on `purchase_units[0]` = cartId (set at order creation). Always returns 200.
+
+**Shared:**
+4. **`GET /tickets/order/cart/:cartId`** — polled by the success page; returns `{ game, buyer, grandTotal, orders: [{ orderNumber, ticketTypeName, tickets }] }`.
 
 ### Multi-cart purchase
 
-A single checkout can contain multiple ticket types (e.g. 4× Single Day + 2× VIP). All reservations share one `cartId` stored on each `TicketReservation`. The PayMongo checkout total = sum of `(price + serviceFee) × quantity` across all items (in centavos = PHP × 100). On success, one `Order` is created per ticket type.
+A single checkout can contain multiple ticket types (e.g. 4× Single Day + 2× VIP). All reservations share one `cartId`. PayMongo total = sum of `(price + serviceFee) × qty` in centavos (PHP × 100). PayPal total = same sum in PHP decimal string. On success, one `Order` is created per ticket type.
 
 **Mongoose 8 note:** `Model.create([...], { session, ordered: true })` — `ordered: true` is required when using a session with multiple documents.
 
@@ -86,6 +98,10 @@ A single checkout can contain multiple ticket types (e.g. 4× Single Day + 2× V
 | `ALLOWED_ORIGIN` | CORS origin (default `*`) |
 | `PAYMONGO_SECRET_KEY` | PayMongo secret key (Basic auth, amounts in centavos) |
 | `PAYMONGO_WEBHOOK_SECRET` | HMAC-SHA256 webhook secret (`paymongo-signature` header, optional in dev) |
+| `PAYPAL_MODE` | `sandbox` or `live` |
+| `PAYPAL_CLIENT_ID` | PayPal app client ID |
+| `PAYPAL_CLIENT_SECRET` | PayPal app secret |
+| `PAYPAL_WEBHOOK_ID` | PayPal webhook ID for signature verification (optional in dev) |
 | `CLOUDINARY_*` | Cloud name, API key, API secret |
 | `SMTP_HOST/PORT/USER/PASS` | MXrouting SMTP (fusion.mxrouting.net:587) |
 | `EMAIL_FROM` | Must match `SMTP_USER` |
@@ -106,7 +122,7 @@ A single checkout can contain multiple ticket types (e.g. 4× Single Day + 2× V
 
 ### Purchase panel (frontend)
 
-`TicketPurchasePanel` uses a `Map<ticketTypeId, { type, quantity }>` cart. `TicketTypeCard` renders as a `<button>` (add to cart) when `cartQty === 0`, and as a `<div>` with a qty stepper when `cartQty > 0`. Grand total = tickets subtotal + web service fees. Buyer must select country (10 options: PH, US, AU, CA, NZ, IT, EU, GB, AE, JP) for team commission tracking. All dates formatted with `timeZone: 'Asia/Manila'` to prevent UTC/PHT off-by-one on Vercel.
+`TicketPurchasePanel` uses a `Map<ticketTypeId, { type, quantity }>` cart. `TicketTypeCard` renders as a `<button>` (add to cart) when `cartQty === 0`, and as a `<div>` with a qty stepper when `cartQty > 0`. Grand total = tickets subtotal + web service fees. Buyer must select country (10 options: PH, US, AU, CA, NZ, IT, EU, GB, AE, MT) for team commission tracking. All dates formatted with `timeZone: 'Asia/Manila'` to prevent UTC/PHT off-by-one on Vercel. Payment method selector (Maya/GCash vs PayPal) shown before submit; PayPal path returns `approvalUrl` and redirects directly to PayPal.
 
 ### TicketType model
 

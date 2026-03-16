@@ -7,8 +7,10 @@ const mongoose = require('mongoose');
  */
 const PendingCheckoutSchema = new mongoose.Schema(
   {
-    cartId:     { type: String, required: true, unique: true },
-    checkoutId: { type: String, required: true },
+    cartId:        { type: String, required: true, unique: true },
+    checkoutId:    { type: String, default: null },   // paymongo only
+    paypalOrderId: { type: String, default: null },   // paypal only
+    paymentMethod: { type: String, enum: ['paymongo', 'paypal'], default: 'paymongo' },
     buyerEmail: { type: String, required: true },
     buyerPhone: { type: String, required: true },
     buyerName:  { type: String, default: null },

@@ -48,9 +48,9 @@ const findLimit = rateLimit({
   message: { success: false, message: 'Too many lookup requests. Please try again later.' },
 });
 
-// Apply express.json() everywhere EXCEPT the webhook route (which needs raw body for HMAC)
+// Apply express.json() everywhere EXCEPT webhook routes (which need raw body for HMAC)
 app.use((req, res, next) => {
-  if (req.path === '/payments/webhook') return next();
+  if (req.path === '/payments/webhook' || req.path === '/payments/paypal/webhook') return next();
   express.json()(req, res, next);
 });
 

@@ -20,13 +20,15 @@ interface FlatTicket {
 
 function SuccessContent() {
   const searchParams = useSearchParams();
-  const ref = searchParams.get('ref');
+  const ref   = searchParams.get('ref');
+  const token = searchParams.get('token'); // PayPal appends ?token=<paypalOrderId>
 
   const [data, setData]         = useState<CartOrderResponse['data'] | null>(null);
   const [status, setStatus]     = useState<'loading' | 'ready' | 'error'>('loading');
   const [downloading, setDownloading] = useState<Record<string, boolean>>({});
-  const attemptsRef = useRef(0);
-  const ticketRefs  = useRef<Record<string, HTMLDivElement | null>>({});
+  const attemptsRef    = useRef(0);
+  const capturedRef    = useRef(false);
+  const ticketRefs     = useRef<Record<string, HTMLDivElement | null>>({});
 
   const downloadTicket = useCallback(async (ticketId: string) => {
     const node = ticketRefs.current[ticketId];
@@ -64,6 +66,24 @@ function SuccessContent() {
     }
 
     async function poll() {
+      // ── PayPal return path: capture the order first ───────────────────────
+      if (token && !capturedRef.current) {
+        capturedRef.current = true;
+        try {
+          const res  = await fetch(`${API_URL}/payments/paypal/capture`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ cartId: ref }),
+          });
+          const json = await res.json();
+          if (res.ok && json.success && !cancelled) {
+            setData(json.data);
+            setStatus('ready');
+            return;
+          }
+        } catch { /* ignore — fall through to polling */ }
+      }
+
       if (await fetchOrder()) return;
       attemptsRef.current += 1;
 
@@ -86,7 +106,7 @@ function SuccessContent() {
 
     poll();
     return () => { cancelled = true; };
-  }, [ref]);
+  }, [ref, token]);
 
   if (status === 'loading') {
     return (

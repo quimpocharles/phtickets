@@ -27,7 +27,10 @@ const ticketReservationSchema = new mongoose.Schema({
   // created so the TTL index does not delete the document before the webhook fires.
   expiresAt:  { type: Date, required: true },
   // Populated after createCheckout() succeeds; used by the webhook to cross-verify.
-  checkoutId: { type: String, default: null },
+  checkoutId:     { type: String, default: null },
+  // PayPal order ID (set for paypal carts; null for paymongo carts).
+  paypalOrderId:  { type: String, default: null },
+  paymentMethod:  { type: String, enum: ['paymongo', 'paypal'], default: 'paymongo' },
   createdAt:  { type: Date, default: Date.now },
 });
 
@@ -40,6 +43,7 @@ ticketReservationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 // Supports the active-reservation aggregate and claim query.
 ticketReservationSchema.index({ ticketTypeId: 1, status: 1, expiresAt: 1 });
 ticketReservationSchema.index({ cartId: 1 });
+ticketReservationSchema.index({ paypalOrderId: 1 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

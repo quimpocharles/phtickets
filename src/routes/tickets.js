@@ -15,6 +15,7 @@ const {
   CHECKOUT_WINDOW_SECONDS,
 } = require('../models/TicketReservation');
 const { createCheckout } = require('../services/paymongo');
+const { createOrder: createPayPalOrder } = require('../services/paypal');
 const { generateOrderNumber } = require('../utils/orderNumber');
 const PendingCheckout = require('../models/PendingCheckout');
 
@@ -130,7 +131,7 @@ router.post('/reserve', async (req, res) => {
 //   5. Return { cartId, expiresAt, checkoutId, checkoutUrl }
 // ─────────────────────────────────────────────────────────────────────────────
 router.post('/purchase', async (req, res) => {
-  const { items, buyerEmail, buyerPhone, buyerName, country } = req.body;
+  const { items, buyerEmail, buyerPhone, buyerName, country, paymentMethod = 'paymongo' } = req.body;
 
   // ── Input validation ──────────────────────────────────────────────────────
   if (!Array.isArray(items) || items.length === 0) {
@@ -213,7 +214,7 @@ router.post('/purchase', async (req, res) => {
     session.endSession();
   }
 
-  // ── Phase 2: create Maya checkout + anchor all reservations ───────────────
+  // ── Phase 2: create payment checkout + anchor all reservations ────────────
   try {
     const game        = await Game.findById(reservations[0].gameId, 'description');
     const totalAmount = normalizedItems.reduce((sum, item) => {
@@ -224,6 +225,55 @@ router.post('/purchase', async (req, res) => {
       ? `${ticketTypeMap.get(normalizedItems[0].ticketTypeId).name} – ${game.description}`
       : `${game.description} (${normalizedItems.length} ticket types)`;
 
+    const pendingItems = reservations.map((r, i) => ({
+      reservationId: r._id,
+      ticketTypeId:  normalizedItems[i].ticketTypeId,
+      quantity:      normalizedItems[i].quantity,
+    }));
+
+    // ── PayPal path ─────────────────────────────────────────────────────────
+    if (paymentMethod === 'paypal') {
+      const paypal = await createPayPalOrder({
+        referenceNumber: cartId,
+        totalAmountPhp:  totalAmount,
+        description,
+        buyerEmail,
+        buyerName,
+      });
+
+      await TicketReservation.updateMany(
+        { cartId },
+        {
+          paypalOrderId: paypal.paypalOrderId,
+          paymentMethod: 'paypal',
+          expiresAt:     new Date(Date.now() + CHECKOUT_WINDOW_SECONDS * 1000),
+        }
+      );
+
+      PendingCheckout.create({
+        cartId,
+        paypalOrderId: paypal.paypalOrderId,
+        paymentMethod: 'paypal',
+        buyerEmail,
+        buyerPhone,
+        buyerName:  buyerName || null,
+        country:    country   || null,
+        gameId:     reservations[0].gameId,
+        items:      pendingItems,
+      }).catch((err) => console.error('[purchase] PendingCheckout save failed:', err.message));
+
+      return res.status(201).json({
+        success: true,
+        data: {
+          cartId,
+          expiresAt:     new Date(Date.now() + CHECKOUT_WINDOW_SECONDS * 1000),
+          paypalOrderId: paypal.paypalOrderId,
+          approvalUrl:   paypal.approvalUrl,
+        },
+      });
+    }
+
+    // ── PayMongo path (default) ─────────────────────────────────────────────
     const checkout = await createCheckout({
       referenceNumber: cartId,
       totalAmount,
@@ -246,16 +296,13 @@ router.post('/purchase', async (req, res) => {
     PendingCheckout.create({
       cartId,
       checkoutId:  checkout.checkoutId,
+      paymentMethod: 'paymongo',
       buyerEmail,
       buyerPhone,
       buyerName:   buyerName || null,
       country:     country   || null,
       gameId:      reservations[0].gameId,
-      items:       reservations.map((r, i) => ({
-        reservationId: r._id,
-        ticketTypeId:  normalizedItems[i].ticketTypeId,
-        quantity:      normalizedItems[i].quantity,
-      })),
+      items:       pendingItems,
     }).catch((err) => console.error('[purchase] PendingCheckout save failed:', err.message));
 
     return res.status(201).json({
@@ -270,7 +317,8 @@ router.post('/purchase', async (req, res) => {
   } catch (err) {
     await TicketReservation.updateMany({ cartId }, { status: 'expired' });
     const pmError = err.response?.data?.errors?.[0];
-    console.error('[purchase] PayMongo checkout failed:', pmError ?? err.message);
+    const ppError = err.response?.data;
+    console.error('[purchase] Checkout creation failed:', pmError ?? ppError ?? err.message);
     return res.status(502).json({ success: false, message: 'Could not initiate payment. Please try again.' });
   }
 });

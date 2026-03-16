@@ -19,8 +19,10 @@ interface FormState {
 }
 
 interface Reservation {
-  checkoutUrl: string;
+  checkoutUrl?: string;   // paymongo
+  approvalUrl?: string;   // paypal
   expiresAt: string;
+  paymentMethod: 'paymongo' | 'paypal';
 }
 
 const COUNTRIES = [
@@ -48,6 +50,7 @@ export default function TicketPurchasePanel({ game }: Props) {
   const [loading, setLoading]   = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [reservation, setReservation] = useState<Reservation | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'paymongo' | 'paypal'>('paymongo');
   const [timeLeft, setTimeLeft] = useState(0);
   const [drawerOpen, setDrawerOpen]   = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -141,12 +144,18 @@ export default function TicketPurchasePanel({ game }: Props) {
     try {
       const res = await purchaseTickets({
         items: cartItems.map(({ type, quantity }) => ({ ticketTypeId: type._id, quantity })),
-        buyerEmail: form.email.trim(),
-        buyerPhone: form.phone.trim(),
-        buyerName:  form.name.trim() || undefined,
-        country:    form.country    || undefined,
+        buyerEmail:    form.email.trim(),
+        buyerPhone:    form.phone.trim(),
+        buyerName:     form.name.trim() || undefined,
+        country:       form.country    || undefined,
+        paymentMethod,
       });
-      setReservation({ checkoutUrl: res.data.checkoutUrl, expiresAt: res.data.expiresAt });
+      setReservation({
+        checkoutUrl:   res.data.checkoutUrl,
+        approvalUrl:   res.data.approvalUrl,
+        expiresAt:     res.data.expiresAt,
+        paymentMethod,
+      });
     } catch (err) {
       setApiError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
@@ -246,15 +255,21 @@ export default function TicketPurchasePanel({ game }: Props) {
                 </div>
 
                 <a
-                  href={reservation.checkoutUrl}
+                  href={reservation.checkoutUrl ?? reservation.approvalUrl}
                   className="w-full bg-offblack hover:bg-black text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-center"
                 >
-                  Continue to Payment →
+                  {reservation.paymentMethod === 'paypal' ? 'Continue to PayPal →' : 'Continue to Payment →'}
                 </a>
 
                 <div className="text-center space-y-1">
-                  <p className="text-xs text-offblack/30">Powered by Maya · Secure checkout</p>
-                  <p className="text-xs text-offblack/40">Visa · Mastercard · JCB · Amex · QR Ph accepted</p>
+                  {reservation.paymentMethod === 'paypal' ? (
+                    <p className="text-xs text-offblack/30">Powered by PayPal · Secure checkout</p>
+                  ) : (
+                    <>
+                      <p className="text-xs text-offblack/30">Powered by Maya · Secure checkout</p>
+                      <p className="text-xs text-offblack/40">Visa · Mastercard · JCB · Amex · QR Ph accepted</p>
+                    </>
+                  )}
                   <p className="text-xs text-offblack/30">
                     By proceeding you agree to our{' '}
                     <a href="/legal" className="underline hover:text-primary transition-colors">Terms &amp; Privacy</a>
@@ -338,6 +353,37 @@ export default function TicketPurchasePanel({ game }: Props) {
               )}
             </div>
 
+            {/* Payment method selector */}
+            <div>
+              <p className="text-xs font-semibold text-offblack/70 uppercase tracking-wide mb-2">Payment Method</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('paymongo')}
+                  className={`rounded-xl border-2 px-3 py-3 text-left transition-all ${
+                    paymentMethod === 'paymongo'
+                      ? 'border-offblack bg-offblack/5'
+                      : 'border-black/10 hover:border-black/25'
+                  }`}
+                >
+                  <p className="text-xs font-bold text-offblack">Maya / GCash</p>
+                  <p className="text-[10px] text-offblack/45 mt-0.5">Card · QR Ph</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('paypal')}
+                  className={`rounded-xl border-2 px-3 py-3 text-left transition-all ${
+                    paymentMethod === 'paypal'
+                      ? 'border-offblack bg-offblack/5'
+                      : 'border-black/10 hover:border-black/25'
+                  }`}
+                >
+                  <p className="text-xs font-bold text-offblack">PayPal</p>
+                  <p className="text-[10px] text-offblack/45 mt-0.5">PayPal balance</p>
+                </button>
+              </div>
+            </div>
+
             {apiError && (
               <p className="text-sm text-danger font-medium bg-danger/5 rounded-lg px-3 py-2">{apiError}</p>
             )}
@@ -380,8 +426,14 @@ export default function TicketPurchasePanel({ game }: Props) {
             </button>
 
             <div className="text-center space-y-1">
-              <p className="text-xs text-offblack/30">Powered by Maya · Secure checkout</p>
-              <p className="text-xs text-offblack/40">Visa · Mastercard · JCB · Amex · QR Ph accepted</p>
+              {paymentMethod === 'paypal' ? (
+                <p className="text-xs text-offblack/30">Powered by PayPal · Secure checkout</p>
+              ) : (
+                <>
+                  <p className="text-xs text-offblack/30">Powered by Maya · Secure checkout</p>
+                  <p className="text-xs text-offblack/40">Visa · Mastercard · JCB · Amex · QR Ph accepted</p>
+                </>
+              )}
             </div>
           </div>
         </form>

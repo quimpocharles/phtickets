@@ -41,6 +41,7 @@ export interface PurchasePayload {
   buyerPhone: string;
   buyerName?: string;
   country?: string;
+  paymentMethod?: 'paymongo' | 'paypal';
 }
 
 export interface PurchaseResponse {
@@ -48,8 +49,12 @@ export interface PurchaseResponse {
   data: {
     cartId: string;
     expiresAt: string;
-    checkoutId: string;
-    checkoutUrl: string;
+    // PayMongo
+    checkoutId?: string;
+    checkoutUrl?: string;
+    // PayPal
+    paypalOrderId?: string;
+    approvalUrl?: string;
   };
   message?: string;
 }

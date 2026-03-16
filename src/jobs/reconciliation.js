@@ -6,6 +6,7 @@ const TicketReservation = require('../models/TicketReservation');
 const Game = require('../models/Game');
 const PendingCheckout = require('../models/PendingCheckout');
 const { getPaymentStatus } = require('../services/paymongo');
+const { captureOrder, getOrderDetails } = require('../services/paypal');
 const { generateTickets } = require('../utils/generateTickets');
 const { sendTicketEmail, sendTransactionNotification } = require('../services/mailer');
 const { sendTicketSMS } = require('../services/sms');
@@ -22,7 +23,7 @@ const MAX_AGE_MS = 24 * 60 * 60 * 1000;  // 24 hours
 // ── Core reconciliation logic for one cart ────────────────────────────────────
 
 async function reconcileCart(pending) {
-  const { cartId, checkoutId } = pending;
+  const { cartId, checkoutId, paypalOrderId, paymentMethod = 'paymongo' } = pending;
 
   // ── Idempotency: check if already fully processed ─────────────────────────
   const reservationIds = pending.items.map((i) => i.reservationId);
@@ -41,12 +42,21 @@ async function reconcileCart(pending) {
     return;
   }
 
-  // ── Verify payment status with PayMongo ───────────────────────────────────
+  // ── Verify payment status ─────────────────────────────────────────────────
   let payment;
   try {
-    payment = await getPaymentStatus(checkoutId);
+    if (paymentMethod === 'paypal') {
+      // Try to capture if still in APPROVED state; fall back to read-only check
+      try {
+        payment = await captureOrder(paypalOrderId);
+      } catch {
+        payment = await getOrderDetails(paypalOrderId);
+      }
+    } else {
+      payment = await getPaymentStatus(checkoutId);
+    }
   } catch (err) {
-    console.error(`[reconciliation] PayMongo verify failed for cart ${cartId}:`, err.message);
+    console.error(`[reconciliation] Payment verify failed for cart ${cartId}:`, err.message);
     return; // Leave as pending — try again next cycle
   }
 
@@ -119,7 +129,7 @@ async function reconcileCart(pending) {
         quantity,
         totalAmount,
         paymentStatus:    'paid',
-        paymentReference: payment.id ?? checkoutId,
+        paymentReference: payment.id ?? (paymentMethod === 'paypal' ? paypalOrderId : checkoutId),
       });
     } catch (err) {
       console.error(`[reconciliation] Order.create failed for reservation ${reservationId}:`, err.message);
