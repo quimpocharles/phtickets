@@ -1,9 +1,0 @@
-{
-  "redirects": [
-    {
-      "source": "/(.*)",
-      "destination": "https://globalhoops.shop/$1",
-      "permanent": true
-    }
-  ]
-}
