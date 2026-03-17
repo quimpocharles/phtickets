@@ -9,7 +9,7 @@ const PendingCheckout = require('../models/PendingCheckout');
 const { getPaymentStatus } = require('../services/paymongo');
 const { captureOrder, getOrderDetails, verifyWebhookSignature: verifyPayPalSignature } = require('../services/paypal');
 const { generateTickets } = require('../utils/generateTickets');
-const { sendTicketEmail, sendTransactionNotification } = require('../services/mailer');
+const { sendTicketEmail } = require('../services/mailer');
 const { sendTicketSMS } = require('../services/sms');
 const { generateOrderNumber } = require('../utils/orderNumber');
 const Ticket = require('../models/Ticket');
@@ -213,16 +213,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         game,
       }).catch((err) => console.error('[sms]', err.message));
 
-      // ── Step 11: Notify EOD recipients of confirmed transaction ───────────
-      sendTransactionNotification({
-        game,
-        buyerName:  reservations[0].buyerName,
-        buyerEmail: reservations[0].buyerEmail,
-        grandTotal: grandTotalCalc,
-        allTickets,
-      }).catch((err) => console.error('[mailer] transaction notification:', err.message));
-
-      // ── Step 12: Mark PendingCheckout as processed ────────────────────────
+      // ── Step 11: Mark PendingCheckout as processed ────────────────────────
       PendingCheckout.findOneAndUpdate(
         { cartId },
         { status: 'processed', processedAt: new Date() }
@@ -443,14 +434,6 @@ router.post('/process/:cartId', async (req, res) => {
       game,
     }).catch((err) => console.error('[sms]', err.message));
 
-    sendTransactionNotification({
-      game,
-      buyerName:  reservations[0].buyerName,
-      buyerEmail: reservations[0].buyerEmail,
-      grandTotal,
-      allTickets,
-    }).catch((err) => console.error('[mailer] transaction notification:', err.message));
-
     // Mark PendingCheckout as processed
     PendingCheckout.findOneAndUpdate(
       { cartId },
@@ -663,14 +646,6 @@ router.post('/paypal/capture', async (req, res) => {
       game,
     }).catch((err) => console.error('[sms]', err.message));
 
-    sendTransactionNotification({
-      game,
-      buyerName:  reservations[0].buyerName,
-      buyerEmail: reservations[0].buyerEmail,
-      grandTotal,
-      allTickets,
-    }).catch((err) => console.error('[mailer] transaction notification:', err.message));
-
     PendingCheckout.findOneAndUpdate(
       { cartId },
       { status: 'processed', processedAt: new Date() }
@@ -857,14 +832,6 @@ router.post('/paypal/webhook', express.raw({ type: 'application/json' }), async 
       orderNumber: firstOrder.orderNumber,
       game,
     }).catch((err) => console.error('[sms]', err.message));
-
-    sendTransactionNotification({
-      game,
-      buyerName:  reservations[0].buyerName,
-      buyerEmail: reservations[0].buyerEmail,
-      grandTotal: grandTotalCalc,
-      allTickets,
-    }).catch((err) => console.error('[mailer] transaction notification:', err.message));
 
     PendingCheckout.findOneAndUpdate(
       { cartId },

@@ -27,9 +27,11 @@ function getSmtp() {
 // Errors that mean Resend accepted/sent the email — do NOT fall back or we'd duplicate
 const RESEND_SENT_ERRORS = ['timeout', 'ECONNRESET', 'ECONNABORTED', 'socket hang up'];
 
-async function sendViaResendWithFallback({ from, to, subject, html }) {
+async function sendViaResendWithFallback({ from, to, bcc, subject, html }) {
   try {
-    const { error } = await getResend().emails.send({ from, to, subject, html });
+    const payload = { from, to, subject, html };
+    if (bcc && bcc.length) payload.bcc = bcc;
+    const { error } = await getResend().emails.send(payload);
     if (error) throw new Error(error.message);
     return 'resend';
   } catch (resendErr) {
@@ -40,7 +42,9 @@ async function sendViaResendWithFallback({ from, to, subject, html }) {
       return 'resend-uncertain';
     }
     console.warn('[mailer] Resend failed, falling back to SMTP:', msg);
-    await getSmtp().sendMail({ from, to, subject, html });
+    const smtpPayload = { from, to, subject, html };
+    if (bcc && bcc.length) smtpPayload.bcc = bcc.join(', ');
+    await getSmtp().sendMail(smtpPayload);
     return 'smtp';
   }
 }
@@ -226,11 +230,15 @@ async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) 
 
   const from = `Global Hoops Passes <${process.env.EMAIL_FROM || 'tickets@globalhoops.shop'}>`;
 
-  console.log('[mailer] Sending pass email to:', to, '| from:', from);
+  const internalRecipients = await ReportRecipient.find({ active: true }).select('email');
+  const bcc = internalRecipients.map((r) => r.email);
+
+  console.log('[mailer] Sending pass email to:', to, '| from:', from, bcc.length ? `| bcc: ${bcc.join(', ')}` : '');
 
   const provider = await sendViaResendWithFallback({
     from,
     to,
+    bcc,
     subject: `Your Global Hoops Passes – Order ${allTickets[0]?.orderNumber ?? ''}`,
     html,
   });
@@ -238,111 +246,4 @@ async function sendTicketEmail({ to, buyerName, game, grandTotal, allTickets }) 
   console.log('[mailer] Email sent successfully to:', to, '| via:', provider);
 }
 
-/**
- * Send a real-time transaction notification email to all active EOD report recipients.
- * Called non-blocking after a successful payment is processed.
- *
- * @param {{ game, buyerName, buyerEmail, grandTotal, allTickets }} opts
- */
-async function sendTransactionNotification({ game, buyerName, buyerEmail, grandTotal, allTickets }) {
-  const activeRecipients = await ReportRecipient.find({ active: true }).select('email name');
-  if (!activeRecipients.length) return;
-
-  const recipients = activeRecipients.map((r) =>
-    r.name ? `${r.name} <${r.email}>` : r.email
-  );
-
-  const gameDate = new Date(game.gameDate);
-  const dateStr  = gameDate.toLocaleDateString('en-PH', {
-    month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila',
-  });
-  const now = new Date().toLocaleString('en-PH', {
-    timeZone: 'Asia/Manila',
-    month: 'long', day: 'numeric', year: 'numeric',
-    hour: 'numeric', minute: '2-digit', hour12: true,
-  });
-
-  // Group passes by type name
-  const typeMap = new Map();
-  for (const t of allTickets) {
-    typeMap.set(t.ticketTypeName, (typeMap.get(t.ticketTypeName) ?? 0) + 1);
-  }
-
-  const passRows = [...typeMap.entries()].map(([name, count]) => `
-    <tr>
-      <td style="padding:8px 16px;font-size:13px;color:#374151;border-bottom:1px solid #f3f4f6;">${name}</td>
-      <td style="padding:8px 16px;font-size:13px;font-weight:700;color:#111827;text-align:right;border-bottom:1px solid #f3f4f6;">${count}</td>
-    </tr>`).join('');
-
-  const html = `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
-    <tr>
-      <td align="center">
-        <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
-
-          <!-- Header -->
-          <tr>
-            <td style="background:#0133ae;padding:20px 28px;">
-              <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.6);">New Transaction</p>
-              <p style="margin:4px 0 0;font-size:20px;font-weight:900;color:#ffffff;">&#8369;${(grandTotal).toLocaleString('en-PH')} &mdash; Payment Confirmed</p>
-            </td>
-          </tr>
-
-          <!-- Body -->
-          <tr>
-            <td style="padding:24px 28px;">
-
-              <p style="margin:0 0 2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9ca3af;">Game</p>
-              <p style="margin:0 0 16px;font-size:15px;font-weight:700;color:#111827;">${game.description}</p>
-
-              <p style="margin:0 0 2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9ca3af;">Date &amp; Venue</p>
-              <p style="margin:0 0 16px;font-size:13px;color:#374151;">${dateStr} &middot; ${game.venue}</p>
-
-              <p style="margin:0 0 2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9ca3af;">Buyer</p>
-              <p style="margin:0 0 16px;font-size:13px;color:#374151;">${buyerName || '&mdash;'} &lt;${buyerEmail}&gt;</p>
-
-              <p style="margin:0 0 8px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9ca3af;">Passes</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:16px;">
-                <tbody>${passRows}</tbody>
-              </table>
-
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
-                <tr>
-                  <td style="padding:12px 16px;font-size:13px;font-weight:600;color:#374151;">Total Paid</td>
-                  <td style="padding:12px 16px;font-size:16px;font-weight:900;color:#111827;text-align:right;">&#8369;${(grandTotal).toLocaleString('en-PH')}</td>
-                </tr>
-              </table>
-
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="padding:14px 28px;border-top:1px solid #f3f4f6;">
-              <p style="margin:0;font-size:11px;color:#9ca3af;">Confirmed at ${now} &middot; Global Hoops Pass System</p>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
-
-  const from = `Global Hoops Passes <${process.env.EMAIL_FROM || 'tickets@globalhoops.shop'}>`;
-
-  const provider = await sendViaResendWithFallback({
-    from,
-    to: recipients,
-    subject: `New Sale: ₱${(grandTotal).toLocaleString('en-PH')} — ${game.description}`,
-    html,
-  });
-
-  console.log('[mailer] Transaction notification sent to:', recipients.join(', '), '| via:', provider);
-}
-
-module.exports = { sendTicketEmail, sendTransactionNotification };
+module.exports = { sendTicketEmail };
